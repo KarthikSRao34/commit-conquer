@@ -1132,7 +1132,13 @@ export default function ProductsPage() {
                         <button className="btn btn-ghost btn-sm">Edit</button>
                         <button
                           className="btn btn-primary btn-sm"
+                          disabled={
+                            (inventoryMap[product.id] ?? product.inventory) <= 0
+                          }
                           onClick={() => {
+                            const currentInv =
+                              inventoryMap[product.id] ?? product.inventory;
+                            if (currentInv <= 0) return;
                             addItem({
                               id: product.id,
                               title: product.title,
@@ -1141,8 +1147,7 @@ export default function ProductsPage() {
                             });
                             setInventoryMap((prev) => ({
                               ...prev,
-                              [product.id]:
-                                (prev[product.id] ?? product.inventory) - 1,
+                              [product.id]: currentInv - 1,
                             }));
                             setCartOpen(true);
                           }}
