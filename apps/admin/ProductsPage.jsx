@@ -7,6 +7,7 @@ import {
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Checkbox from "@radix-ui/react-checkbox";
 import * as Select from "@radix-ui/react-select";
+import { useCartState, useCartDispatch } from "../storefront/Layout";
 
 // ─── Mock Medusa SDK (replace with your actual client) ───────────────────────
 const fetchProducts = async ({ pageParam = 0, filters }) => {
@@ -31,8 +32,9 @@ const fetchProducts = async ({ pageParam = 0, filters }) => {
       "Cinder Vest",
     ][i % 12],
     status: ["published", "draft", "published", "published", "draft"][i % 5],
-    price: `$${(29 + ((i * 17) % 200)).toFixed(2)}`,
-    inventory: Math.floor(Math.random() * 200),
+    price: 29 + ((i * 17) % 200),
+    priceLabel: `$${(29 + ((i * 17) % 200)).toFixed(2)}`,
+    inventory: 200 - ((i * 13) % 200),
     category: ["Tops", "Bottoms", "Outerwear", "Accessories"][i % 4],
     updatedAt: new Date(Date.now() - i * 86400000 * 3).toLocaleDateString(),
   }));
@@ -66,8 +68,19 @@ const css = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { overflow-x: hidden; }
-.table-wrap { overflow-x: hidden; }
+
+  /*
+   * SCROLL FIX:
+   * - html/body fill the viewport and don't scroll themselves
+   * - .page is a flex column that also fills the viewport
+   * - .table-wrap gets flex:1 + overflow-y:auto → only the table region scrolls
+   * - This eliminates the "stuck scrollbar" caused by competing scroll contexts
+   */
+  html, body {
+    height: 100%;
+    overflow: hidden;      /* body never scrolls */
+  }
+
   :root {
     --bg: #0c0c0e;
     --surface: #141417;
@@ -94,23 +107,28 @@ const css = `
   }
 
   body { background: var(--bg); color: var(--text); font-family: var(--sans); }
-    ::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+  /* Page is now a full-height flex column — nothing overflows out of it */
   .page {
-    min-height: 100vh;
-    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     background: var(--bg);
     background-image: radial-gradient(ellipse 60% 40% at 70% -10%, rgba(124,106,255,0.06) 0%, transparent 60%);
   }
 
   /* Header */
   .header {
+    flex-shrink: 0;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 28px 32px 0;
+    padding: 28px 32px 20px;
     border-bottom: 1px solid var(--border);
-    padding-bottom: 20px;
   }
   .header-left h1 {
     font-size: 22px; font-weight: 800; letter-spacing: -0.5px;
@@ -131,8 +149,19 @@ const css = `
   .btn-danger:hover { background: rgba(255,92,92,0.22); }
   .btn-sm { padding: 6px 12px; font-size: 12px; }
 
+  /* Stats */
+  .stats {
+    flex-shrink: 0;
+    display: flex; gap: 0; border-bottom: 1px solid var(--border);
+  }
+  .stat { padding: 16px 32px; border-right: 1px solid var(--border); }
+  .stat:last-child { border-right: none; }
+  .stat-val { font-size: 22px; font-weight: 800; color: var(--text); font-family: var(--mono); }
+  .stat-lbl { font-size: 11px; color: var(--text-muted); margin-top: 1px; text-transform: uppercase; letter-spacing: 0.06em; }
+
   /* Toolbar */
   .toolbar {
+    flex-shrink: 0;
     display: flex; align-items: center; gap: 10px;
     padding: 16px 32px;
     border-bottom: 1px solid var(--border);
@@ -179,6 +208,7 @@ const css = `
 
   /* Bulk bar */
   .bulk-bar {
+    flex-shrink: 0;
     display: flex; align-items: center; gap: 12px;
     padding: 10px 32px;
     background: var(--accent-dim);
@@ -188,10 +218,21 @@ const css = `
   @keyframes slideDown { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   .bulk-bar span { font-family: var(--mono); font-size: 13px; color: var(--accent); }
 
-  /* Table */
-  .table-wrap { padding: 0 32px; overflow-x: auto; }
+  /*
+   * TABLE WRAP: flex:1 + overflow-y:auto makes ONLY this region scroll.
+   * The header/toolbar stay pinned. No more stuck/double scrollbar.
+   */
+  .table-wrap {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    padding: 0 32px;
+  }
+
   table { width: 100%; border-collapse: collapse; }
   thead th {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--bg);
     text-align: left; padding: 12px 14px;
     font-family: var(--mono); font-size: 11px; font-weight: 500;
     color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase;
@@ -280,35 +321,376 @@ const css = `
   .inv-track { width: 48px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
   .inv-fill { height: 100%; border-radius: 2px; background: var(--accent); }
 
-  /* Stats */
-  .stats { display: flex; gap: 0; border-bottom: 1px solid var(--border); }
-  .stat { padding: 16px 32px; border-right: 1px solid var(--border); }
-  .stat:last-child { border-right: none; }
-  .stat-val { font-size: 22px; font-weight: 800; color: var(--text); font-family: var(--mono); }
-  .stat-lbl { font-size: 11px; color: var(--text-muted); margin-top: 1px; text-transform: uppercase; letter-spacing: 0.06em; }
-
   /* Skeleton */
   .skeleton { background: var(--surface2); border-radius: 4px; animation: shimmer 1.4s infinite; }
   @keyframes shimmer {
     0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; }
   }
-    .img-wrap { position: relative; display: inline-block; }
-.img-wrap:hover .img-preview {
-  opacity: 1;
-  transform: scale(1) translateY(0);
-  pointer-events: auto;
-}
-.img-preview {
-  position: absolute; left: 50%; top: 50px;
-  transform: scale(0.95) translateY(-4px) translateX(-50%);
-  width: 160px; height: 160px; border-radius: 10px;
-  object-fit: cover; z-index: 50;
-  border: 1px solid var(--border);
-  box-shadow: 0 16px 40px rgba(0,0,0,0.6);
-  opacity: 0; pointer-events: none;
-  transition: all 200ms cubic-bezier(0.4,0,0.2,1);
-}
+
+  .img-wrap { position: relative; display: inline-block; }
+  .img-wrap:hover .img-preview {
+    opacity: 1;
+    transform: scale(1) translateY(0) translateX(-50%);
+    pointer-events: auto;
+  }
+  .img-preview {
+    position: absolute; left: 50%; top: 50px;
+    transform: scale(0.95) translateY(-4px) translateX(-50%);
+    width: 160px; height: 160px; border-radius: 10px;
+    object-fit: cover; z-index: 50;
+    border: 1px solid var(--border);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+    opacity: 0; pointer-events: none;
+    transition: all 200ms cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* ── Floating Cart Button ── */
+  .cart-fab {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 150;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    background: var(--accent);
+    border: none;
+    border-radius: 99px;
+    color: #fff;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 24px var(--accent-glow), 0 2px 8px rgba(0,0,0,0.4);
+    transition: all var(--transition);
+  }
+  .cart-fab:hover {
+    background: #9080ff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px var(--accent-glow), 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .cart-fab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px; height: 20px;
+    background: #fff;
+    color: var(--accent);
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 800;
+    font-family: var(--mono);
+    line-height: 1;
+  }
+
+  /* ── Cart Slide-over Panel ── */
+  .cart-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(3px);
+    z-index: 300;
+    animation: fadeIn 150ms ease;
+  }
+  .cart-panel {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 380px;
+    max-width: 100vw;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 301;
+    display: flex;
+    flex-direction: column;
+    animation: slideInRight 220ms cubic-bezier(0.4,0,0.2,1);
+    box-shadow: -16px 0 48px rgba(0,0,0,0.5);
+  }
+  @keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0.6; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  .cart-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .cart-header h2 {
+    font-size: 16px; font-weight: 800; color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .cart-count-pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-weight: 500;
+  }
+  .cart-close {
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .cart-close:hover { background: var(--border); color: var(--text); }
+
+  .cart-items {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .cart-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 13px;
+    gap: 8px;
+    padding: 40px;
+  }
+  .cart-empty-icon { font-size: 32px; opacity: 0.3; }
+
+  .cart-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    transition: border-color var(--transition);
+  }
+  .cart-item:hover { border-color: var(--border-hover); }
+  .cart-item img {
+    width: 44px; height: 44px;
+    border-radius: 6px; object-fit: cover; flex-shrink: 0;
+  }
+  .cart-item-info { flex: 1; min-width: 0; }
+  .cart-item-title {
+    font-size: 13px; font-weight: 600; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cart-item-meta {
+    font-family: var(--mono); font-size: 11px; color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .cart-item-qty {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .qty-btn {
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text-muted);
+    cursor: pointer; font-size: 14px; line-height: 1;
+    transition: all var(--transition);
+  }
+  .qty-btn:hover { background: var(--border); color: var(--text); }
+  .qty-val { font-family: var(--mono); font-size: 13px; color: var(--text); min-width: 16px; text-align: center; }
+  .cart-item-price {
+    font-family: var(--mono); font-size: 13px; color: var(--green);
+    flex-shrink: 0; margin-left: 4px;
+  }
+  .cart-item-remove {
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: none;
+    color: var(--text-muted); cursor: pointer;
+    border-radius: 4px;
+    transition: all var(--transition);
+    flex-shrink: 0;
+  }
+  .cart-item-remove:hover { color: var(--red); background: var(--red-dim); }
+
+  .cart-footer {
+    flex-shrink: 0;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .cart-total-row {
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .cart-total-label { font-size: 13px; color: var(--text-muted); font-family: var(--mono); }
+  .cart-total-val { font-size: 20px; font-weight: 800; color: var(--text); font-family: var(--mono); }
+  .btn-checkout {
+    width: 100%; padding: 13px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: var(--radius-lg);
+    font-family: var(--sans); font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: all var(--transition);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn-checkout:hover { background: #9080ff; box-shadow: 0 0 24px var(--accent-glow); }
+  .btn-clear {
+    width: 100%; padding: 9px;
+    background: transparent; color: var(--text-muted);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    font-family: var(--mono); font-size: 12px;
+    cursor: pointer; transition: all var(--transition);
+  }
+  .btn-clear:hover { background: var(--red-dim); color: var(--red); border-color: rgba(255,92,92,0.25); }
 `;
+
+// ─── Inline CartDrawer (slide-over panel) ────────────────────────────────────
+function CartPanel({ open, onClose, setInventoryMap }) {
+  const { items, itemCount, total } = useCartState();
+  const { removeItem, updateQty, clearCart } = useCartDispatch();
+
+  if (!open) return null;
+
+  return (
+    <>
+      <div className="cart-overlay" onClick={onClose} />
+      <div className="cart-panel" role="dialog" aria-label="Cart">
+        {/* Header */}
+        <div className="cart-header">
+          <h2>
+            Cart
+            <span className="cart-count-pill">{itemCount} items</span>
+          </h2>
+          <button
+            className="cart-close"
+            onClick={onClose}
+            aria-label="Close cart"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Items */}
+        <div className="cart-items">
+          {items.length === 0 ? (
+            <div className="cart-empty">
+              <div className="cart-empty-icon">🛒</div>
+              <span>Your cart is empty</span>
+              <span style={{ fontSize: 11, opacity: 0.6 }}>
+                Click "Add to cart" on any row
+              </span>
+            </div>
+          ) : (
+            items.map((item) => (
+              <div className="cart-item" key={item.id}>
+                <img src={item.thumbnail} alt={item.title} />
+                <div className="cart-item-info">
+                  <div className="cart-item-title">{item.title}</div>
+                  <div className="cart-item-meta">
+                    ${item.price?.toFixed(2)} each
+                  </div>
+                </div>
+                <div className="cart-item-qty">
+                  <button
+                    className="qty-btn"
+                    onClick={() => {
+                      if (item.quantity === 1) {
+                        setInventoryMap((prev) => ({
+                          ...prev,
+                          [item.id]: (prev[item.id] ?? 0) + 1,
+                        }));
+                      }
+                      updateQty(item.id, item.quantity - 1);
+                    }}
+                    aria-label="Decrease quantity"
+                  >
+                    −
+                  </button>
+                  <span className="qty-val">{item.quantity}</span>
+                  <button
+                    className="qty-btn"
+                    onClick={() => {
+                      setInventoryMap((prev) => ({
+                        ...prev,
+                        [item.id]: (prev[item.id] ?? 0) - 1,
+                      }));
+                      updateQty(item.id, item.quantity + 1);
+                    }}
+                    aria-label="Increase quantity"
+                  >
+                    +
+                  </button>
+                </div>
+                <span className="cart-item-price">
+                  ${(item.price * item.quantity).toFixed(2)}
+                </span>
+                <button
+                  className="cart-item-remove"
+                  onClick={() => {
+                    setInventoryMap((prev) => ({
+                      ...prev,
+                      [item.id]:
+                        (prev[item.id] ?? item.inventory) + item.quantity,
+                    }));
+                    removeItem(item.id);
+                  }}
+                  aria-label="Remove item"
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        {items.length > 0 && (
+          <div className="cart-footer">
+            <div className="cart-total-row">
+              <span className="cart-total-label">Total</span>
+              <span className="cart-total-val">${total.toFixed(2)}</span>
+            </div>
+            <button className="btn-checkout">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+              Proceed to Checkout
+            </button>
+            <button className="btn-clear" onClick={clearCart}>
+              Clear cart
+            </button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
 
 // ─── ProductsPage ─────────────────────────────────────────────────────────────
 export default function ProductsPage() {
@@ -323,6 +705,11 @@ export default function ProductsPage() {
   // Selection state
   const [selected, setSelected] = useState(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [inventoryMap, setInventoryMap] = useState({});
+  // Cart panel state
+  const [cartOpen, setCartOpen] = useState(false);
+  const { itemCount } = useCartState();
+  const { addItem } = useCartDispatch();
 
   // Debounce search
   useEffect(() => {
@@ -335,7 +722,6 @@ export default function ProductsPage() {
     setSelected(new Set());
   }, [debouncedSearch, statusFilter, categoryFilter]);
 
-  // ── THE FIX: filters are part of query key → resets to page 1 on change ──
   const filters = {
     search: debouncedSearch,
     status: statusFilter,
@@ -350,7 +736,6 @@ export default function ProductsPage() {
     isLoading,
     isFetching,
   } = useInfiniteQuery({
-    // ✅ Fix: include all filter values in query key
     queryKey: ["admin", "products", filters],
     queryFn: ({ pageParam }) => fetchProducts({ pageParam, filters }),
     getNextPageParam: (last) => last.nextPage,
@@ -581,15 +966,14 @@ export default function ProductsPage() {
               >
                 <polyline points="3 6 5 6 21 6" />
                 <path d="M19 6l-1 14H6L5 6" />
-                <path d="M10 11v6M14 11v6" />
-                <path d="M9 6V4h6v2" />
+                <path d="M10 11v6M14 11v6M9 6V4h6v2" />
               </svg>
               Delete {selected.size}
             </button>
           </div>
         )}
 
-        {/* Table */}
+        {/* Table — this region scrolls, nothing else does */}
         <div className="table-wrap">
           <table>
             <thead>
@@ -726,15 +1110,17 @@ export default function ProductsPage() {
                       </span>
                     </td>
                     <td className="td-mono">{product.category}</td>
-                    <td className="td-price">{product.price}</td>
+                    <td className="td-price">{product.priceLabel}</td>
                     <td>
                       <div className="inv-bar">
-                        <span className="td-mono">{product.inventory}</span>
+                        <span className="td-mono">
+                          {inventoryMap[product.id] ?? product.inventory}
+                        </span>
                         <div className="inv-track">
                           <div
                             className="inv-fill"
                             style={{
-                              width: `${Math.min(100, product.inventory / 2)}%`,
+                              width: `${Math.min(100, (inventoryMap[product.id] ?? product.inventory) / 2)}%`,
                             }}
                           />
                         </div>
@@ -744,6 +1130,25 @@ export default function ProductsPage() {
                     <td>
                       <div className="row-actions">
                         <button className="btn btn-ghost btn-sm">Edit</button>
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => {
+                            addItem({
+                              id: product.id,
+                              title: product.title,
+                              price: product.price,
+                              thumbnail: product.thumbnail,
+                            });
+                            setInventoryMap((prev) => ({
+                              ...prev,
+                              [product.id]:
+                                (prev[product.id] ?? product.inventory) - 1,
+                            }));
+                            setCartOpen(true);
+                          }}
+                        >
+                          + Cart
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -798,6 +1203,39 @@ export default function ProductsPage() {
           </Dialog.Portal>
         </Dialog.Root>
       </div>
+
+      {/* Floating cart button — always visible, no scrolling required */}
+      <button
+        className="cart-fab"
+        onClick={() => setCartOpen(true)}
+        aria-label="Open cart"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+        >
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <path d="M16 10a4 4 0 0 1-8 0" />
+        </svg>
+        Cart
+        {itemCount > 0 && (
+          <span className="cart-fab-badge">
+            {itemCount > 9 ? "9+" : itemCount}
+          </span>
+        )}
+      </button>
+
+      {/* Cart slide-over panel */}
+      <CartPanel
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        setInventoryMap={setInventoryMap}
+      />
     </>
   );
 }
