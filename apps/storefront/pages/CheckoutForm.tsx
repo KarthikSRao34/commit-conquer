@@ -3,7 +3,7 @@
 // Drop this file at: apps/storefront/CheckoutForm.tsx
 
 import { useState, useCallback } from "react";
-import { useCartState, useCartDispatch } from "./Layout";
+import { useCartState, useCartDispatch } from "../Layout";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AddressForm {
@@ -286,8 +286,9 @@ const STEPS: { key: Step; label: string }[] = [
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function CheckoutForm() {
-  const { items, total } = useCartState();
-  const { clearCart } = useCartDispatch() as { clearCart: () => void };
+  const { items, total } = useCartState() ?? { items: [], total: 0 };
+  const dispatch = useCartDispatch();
+  const clearCart: () => void = (dispatch as any)?.clearCart ?? (() => {});
 
   const [step, setStep] = useState<Step>("address");
   const [address, setAddress] = useState<AddressForm>(EMPTY_ADDRESS);

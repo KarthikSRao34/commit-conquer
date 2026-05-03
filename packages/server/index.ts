@@ -39,15 +39,15 @@ import morgan from "morgan";
 import "dotenv/config";
 
 // ── Module Services (all already exist in your repo) ──────────────────────────
-import { ProductService, ServiceError } from "../modules/products/product.service";
-import { AuthService }     from "../modules/auth/auth.service";
-import { CartService }     from "../modules/cart/cart.service";
-import { OrderService }    from "../modules/orders/order.service";
-import { PaymentService }  from "../modules/payments/payment.service";
-import { InventoryService } from "../modules/inventory/inventory.service";
-import { DiscountService } from "../modules/discounts/discount.service";
-import { ShippingService } from "../modules/shipping/shipping.service";
-import { eventBus, EVENT } from "../core/event-bus";
+import { ProductService, ServiceError } from "../modules/products/product.service.ts";
+import { AuthService }     from "../modules/auth/auth.service.ts";
+import { CartService }     from "../modules/cart/cart.service.ts";
+import { OrderService }    from "../modules/orders/order.service.ts";
+import { PaymentService }  from "../modules/payments/payment.service.ts";
+import { InventoryService } from "../modules/inventory/inventory.service.ts";
+import { DiscountService } from "../modules/discounts/discount.service.ts";
+import { ShippingService } from "../modules/shipping/shipping.service.ts";
+import { eventBus, EVENT } from "../core/event-bus.ts";
 
 // ─── App bootstrap ────────────────────────────────────────────────────────────
 

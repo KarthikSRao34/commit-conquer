@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "outDir": "dist"
+  },
+  "ts-node": {
+    "transpileOnly": false,
+    "swc": false
+  }
+}

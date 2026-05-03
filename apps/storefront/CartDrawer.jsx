@@ -1,344 +1,112 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCartState, useCartDispatch } from "../storefront/Layout";
+// apps/storefront/CartDrawer.jsx
+// Slide-out cart. Import in pages/index.tsx as: import CartDrawer from "../CartDrawer"
 
-// ─── Mock API call — replace with your real DELETE endpoint ──────────────────
-const deleteCartItem = async (itemId) => {
-  await new Promise((r) => setTimeout(r, 600));
-  // Simulate occasional failure for testing rollback:
-  // if (Math.random() < 0.4) throw new Error("Server error");
-  return { deleted: itemId };
-};
+import { useCartState, useCartDispatch } from "./Layout";
+import { useNavigate } from "react-router-dom";
 
-// ─── CartDrawer ───────────────────────────────────────────────────────────────
 export default function CartDrawer() {
-  const { items, itemCount, total } = useCartState();
-  const { removeItem, clearCart } = useCartDispatch();
-  const queryClient = useQueryClient();
+  const cart     = useCartState();
+  const dispatch = useCartDispatch();
+  const navigate = useNavigate();
 
-  // ─── Optimistic removal with rollback on error ────────────────────────────
-  // 1. onMutate  → snapshot current cart, optimistically remove item from UI
-  // 2. onError   → rollback to snapshot using setQueryData
-  // 3. onSettled → always re-sync server state
-  const removeMutation = useMutation({
-    mutationFn: deleteCartItem,
+  const close = () => dispatch({ type: "TOGGLE_CART", payload: false });
 
-    onMutate: async (itemId) => {
-      // Cancel any in-flight refetches so they don't overwrite our optimistic update
-      await queryClient.cancelQueries({ queryKey: ["cart"] });
-
-      // Snapshot the current items so we can roll back
-      const previousItems = queryClient.getQueryData(["cart"]);
-
-      // Optimistically remove from React Query cache
-      queryClient.setQueryData(["cart"], (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          items: old.items?.filter((i) => i.id !== itemId) ?? [],
-        };
-      });
-
-      // Also remove from context so CartProvider state reflects it immediately
-      removeItem(itemId);
-
-      // Return snapshot for onError
-      return { previousItems };
-    },
-
-    onError: (error, itemId, context) => {
-      // ✅ THE FIX: restore previous cart state on API failure
-      if (context?.previousItems !== undefined) {
-        queryClient.setQueryData(["cart"], context.previousItems);
-      }
-
-      // Invalidate so CartProvider re-syncs from server
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-
-      console.error(`Failed to remove item ${itemId}:`, error.message);
-    },
-
-    onSettled: () => {
-      // Always re-sync after mutation, success or failure
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-    },
-  });
-
-  const handleRemove = (itemId) => {
-    removeMutation.mutate(itemId);
+  const goCheckout = () => {
+    close();
+    navigate("/checkout");
   };
 
-  // ─── Empty state ──────────────────────────────────────────────────────────
-  if (items.length === 0) {
-    return (
-      <div style={styles.wrap}>
-        <div style={styles.header}>
-          <h2 style={styles.title}>Cart</h2>
-        </div>
-        <div style={styles.emptyWrap}>
-          <div style={styles.emptyIcon}>🛒</div>
-          <p style={styles.emptyHeading}>Your cart is empty</p>
-          <p style={styles.emptySubtext}>Add products to get started</p>
-        </div>
-      </div>
-    );
-  }
+  if (!cart) return null;
 
   return (
-    <div style={styles.wrap}>
-      {/* Header */}
-      <div style={styles.header}>
-        <h2 style={styles.title}>
-          Cart <span style={styles.countPill}>{itemCount} items</span>
-        </h2>
-        <button style={styles.clearBtn} onClick={clearCart}>
-          Clear all
-        </button>
-      </div>
-
-      {/* Item list */}
-      <ul style={styles.list}>
-        {items.map((item) => {
-          const isRemoving =
-            removeMutation.isPending && removeMutation.variables === item.id;
-
-          return (
-            <li
-              key={item.id}
-              style={{ ...styles.item, opacity: isRemoving ? 0.4 : 1 }}
-            >
-              {/* Thumbnail */}
-              {item.thumbnail && (
-                <img
-                  src={item.thumbnail}
-                  alt={item.title}
-                  style={styles.thumb}
-                />
-              )}
-
-              {/* Info */}
-              <div style={styles.info}>
-                <span style={styles.itemTitle}>{item.title}</span>
-                <span style={styles.itemMeta}>
-                  ${item.price?.toFixed(2)} x {item.quantity}
-                </span>
-              </div>
-
-              {/* Line total */}
-              <span style={styles.lineTotal}>
-                ${(item.price * item.quantity).toFixed(2)}
-              </span>
-
-              {/* Remove button */}
-              <button
-                style={styles.removeBtn}
-                onClick={() => handleRemove(item.id)}
-                disabled={isRemoving}
-                aria-label={`Remove ${item.title}`}
-              >
-                {isRemoving ? "..." : "x"}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-
-      {/* Error banner — shown if last removal failed */}
-      {removeMutation.isError && (
-        <div style={styles.errorBanner}>
-          Failed to remove item. It has been restored.
-        </div>
+    <>
+      {cart.isOpen && (
+        <div onClick={close} style={s.backdrop} />
       )}
-
-      {/* Footer */}
-      <div style={styles.footer}>
-        <div style={styles.totalRow}>
-          <span style={styles.totalLabel}>Total</span>
-          <span style={styles.totalVal}>${total.toFixed(2)}</span>
+      <aside style={{ ...s.drawer, transform: cart.isOpen ? "translateX(0)" : "translateX(100%)" }}>
+        <div style={s.head}>
+          <h2 style={{ fontSize: 18, fontWeight: 700 }}>Cart ({cart.count})</h2>
+          <button onClick={close} style={s.closeBtn} aria-label="Close">✕</button>
         </div>
-        <button style={styles.checkoutBtn}>Proceed to Checkout</button>
+
+        <div style={s.body}>
+          {cart.items.length === 0 ? (
+            <div style={s.empty}>
+              <p style={{ fontSize: 36 }}>🛒</p>
+              <p style={{ color: "#666", marginTop: 12 }}>Your cart is empty</p>
+              <button onClick={close} style={s.ctaBtn}>Browse Products</button>
+            </div>
+          ) : (
+            cart.items.map((item) => <CartItem key={`${item.id}__${item.variantId}`} item={item} />)
+          )}
+        </div>
+
+        {cart.items.length > 0 && (
+          <div style={s.foot}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <span style={{ color: "#aaa", fontSize: 14 }}>Subtotal</span>
+              <span style={{ fontWeight: 700, fontSize: 18 }}>${cart.total.toFixed(2)}</span>
+            </div>
+            <p style={{ color: "#555", fontSize: 12, marginBottom: 16, textAlign: "center" }}>
+              Shipping &amp; taxes calculated at checkout
+            </p>
+            <button onClick={goCheckout} style={s.ctaBtn}>Checkout →</button>
+            <button onClick={close} style={s.ghostBtn}>Continue Shopping</button>
+          </div>
+        )}
+      </aside>
+      <style>{`@keyframes fadeIn{from{opacity:0}to{opacity:1}}`}</style>
+    </>
+  );
+}
+
+function CartItem({ item }) {
+  const dispatch = useCartDispatch();
+  const key = { id: item.id, variantId: item.variantId };
+
+  return (
+    <div style={s.item}>
+      <img src={item.thumbnail} alt={item.title} style={s.thumb}
+        onError={(e) => { e.target.src = "https://placehold.co/80x96?text=img"; }} />
+      <div style={{ flex: 1 }}>
+        <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>{item.title}</p>
+        {item.size  && <p style={s.meta}>Size: {item.size}</p>}
+        {item.color && <p style={s.meta}>Color: {item.color}</p>}
+        <p style={{ fontWeight: 700, fontSize: 14, marginTop: 4 }}>
+          ${(item.price * item.quantity).toFixed(2)}
+        </p>
+        <div style={s.qtyRow}>
+          <button style={s.qtyBtn} onClick={() => dispatch({ type: "UPDATE_QTY", payload: { ...key, quantity: item.quantity - 1 } })}>−</button>
+          <span style={{ minWidth: 20, textAlign: "center", fontSize: 14, fontWeight: 600 }}>{item.quantity}</span>
+          <button style={s.qtyBtn} onClick={() => dispatch({ type: "UPDATE_QTY", payload: { ...key, quantity: item.quantity + 1 } })}>+</button>
+          <button style={s.removeBtn} onClick={() => dispatch({ type: "REMOVE_ITEM", payload: key })}>Remove</button>
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = {
-  wrap: {
-    display: "flex",
-    flexDirection: "column",
-    height: "100%",
-    fontFamily: "sans-serif",
-    background: "#141417",
-    color: "#e8e8f0",
+const s = {
+  backdrop: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 200, animation: "fadeIn 0.2s ease" },
+  drawer: {
+    position: "fixed", top: 0, right: 0, bottom: 0,
+    width: "min(420px,100vw)", background: "#141417",
+    zIndex: 300, display: "flex", flexDirection: "column",
+    boxShadow: "-8px 0 40px rgba(0,0,0,0.5)",
+    transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)",
+    borderLeft: "1px solid #2a2a31",
   },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "20px 24px",
-    borderBottom: "1px solid #2a2a31",
-    flexShrink: 0,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: 800,
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    margin: 0,
-  },
-  countPill: {
-    fontSize: 11,
-    fontWeight: 500,
-    background: "rgba(124,106,255,0.15)",
-    color: "#7c6aff",
-    padding: "2px 8px",
-    borderRadius: 99,
-    fontFamily: "monospace",
-  },
-  clearBtn: {
-    background: "transparent",
-    border: "1px solid #2a2a31",
-    borderRadius: 6,
-    color: "#6b6b80",
-    fontSize: 12,
-    padding: "5px 10px",
-    cursor: "pointer",
-    fontFamily: "monospace",
-  },
-  list: {
-    listStyle: "none",
-    margin: 0,
-    padding: "16px 24px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-    flex: 1,
-    overflowY: "auto",
-  },
-  item: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: 12,
-    background: "#1c1c21",
-    border: "1px solid #2a2a31",
-    borderRadius: 10,
-    transition: "opacity 200ms ease",
-  },
-  thumb: {
-    width: 44,
-    height: 44,
-    borderRadius: 6,
-    objectFit: "cover",
-    flexShrink: 0,
-  },
-  info: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    gap: 3,
-    minWidth: 0,
-  },
-  itemTitle: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#e8e8f0",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  },
-  itemMeta: {
-    fontSize: 11,
-    color: "#6b6b80",
-    fontFamily: "monospace",
-  },
-  lineTotal: {
-    fontSize: 13,
-    color: "#3ddc97",
-    fontFamily: "monospace",
-    flexShrink: 0,
-  },
-  removeBtn: {
-    width: 26,
-    height: 26,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "transparent",
-    border: "none",
-    color: "#6b6b80",
-    fontSize: 13,
-    cursor: "pointer",
-    borderRadius: 4,
-    flexShrink: 0,
-  },
-  errorBanner: {
-    margin: "0 24px",
-    padding: "10px 14px",
-    background: "rgba(255,92,92,0.12)",
-    border: "1px solid rgba(255,92,92,0.25)",
-    borderRadius: 6,
-    color: "#ff5c5c",
-    fontSize: 12,
-    fontFamily: "monospace",
-    flexShrink: 0,
-  },
-  footer: {
-    padding: "16px 24px",
-    borderTop: "1px solid #2a2a31",
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-    flexShrink: 0,
-  },
-  totalRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  totalLabel: {
-    fontSize: 13,
-    color: "#6b6b80",
-    fontFamily: "monospace",
-  },
-  totalVal: {
-    fontSize: 20,
-    fontWeight: 800,
-    color: "#e8e8f0",
-    fontFamily: "monospace",
-  },
-  checkoutBtn: {
-    width: "100%",
-    padding: 13,
-    background: "#7c6aff",
-    color: "#fff",
-    border: "none",
-    borderRadius: 10,
-    fontSize: 14,
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-  emptyWrap: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    padding: 40,
-  },
-  emptyIcon: { fontSize: 36, opacity: 0.3 },
-  emptyHeading: {
-    fontSize: 15,
-    fontWeight: 700,
-    color: "#e8e8f0",
-    margin: 0,
-  },
-  emptySubtext: {
-    fontSize: 12,
-    color: "#6b6b80",
-    margin: 0,
-    fontFamily: "monospace",
-  },
+  head: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: "1px solid #2a2a31" },
+  closeBtn: { background: "none", border: "none", cursor: "pointer", color: "#888", fontSize: 18, padding: 4 },
+  body: { flex: 1, overflowY: "auto", padding: "16px 24px" },
+  empty: { textAlign: "center", paddingTop: 60 },
+  item: { display: "flex", gap: 14, padding: "16px 0", borderBottom: "1px solid #1c1c21" },
+  thumb: { width: 72, height: 88, objectFit: "cover", borderRadius: 8, flexShrink: 0 },
+  meta: { color: "#888", fontSize: 12 },
+  qtyRow: { display: "flex", alignItems: "center", gap: 8, marginTop: 8 },
+  qtyBtn: { width: 26, height: 26, border: "1px solid #2a2a31", background: "#1c1c21", color: "#e8e8f0", cursor: "pointer", borderRadius: 6, fontSize: 15 },
+  removeBtn: { marginLeft: "auto", background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 12 },
+  foot: { padding: "20px 24px", borderTop: "1px solid #2a2a31", display: "flex", flexDirection: "column", gap: 10 },
+  ctaBtn: { width: "100%", padding: "13px", background: "#7c6aff", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" },
+  ghostBtn: { width: "100%", padding: "11px", background: "none", color: "#888", border: "1px solid #2a2a31", borderRadius: 10, fontSize: 14, cursor: "pointer" },
 };
