@@ -9,6 +9,7 @@ import * as Checkbox from "@radix-ui/react-checkbox";
 import * as Select from "@radix-ui/react-select";
 import { useCartState, useCartDispatch } from "../storefront/Layout";
 
+
 // ─── Mock Medusa SDK (replace with your actual client) ───────────────────────
 const fetchProducts = async ({ pageParam = 0, filters }) => {
   await new Promise((r) => setTimeout(r, 600));
@@ -669,7 +670,7 @@ function CartPanel({ open, onClose, setInventoryMap }) {
               <span className="cart-total-label">Total</span>
               <span className="cart-total-val">${total.toFixed(2)}</span>
             </div>
-            <button className="btn-checkout">
+            <button className="btn-checkout" onClick={() => navigate('/checkout')}>
               <svg
                 width="14"
                 height="14"
