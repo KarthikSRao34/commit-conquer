@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Select from "@radix-ui/react-select";
+import DataTable from "./DataTable";
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const STATUSES = [
@@ -845,80 +846,38 @@ export default function OrdersPage() {
 
         {/* Table */}
         <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Order</th>
-                <th>Customer</th>
-                <th>Status</th>
-                <th>Items</th>
-                <th>Total</th>
-                <th>Date</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                Array.from({ length: 8 }, (_, i) => (
-                  <tr key={i}>
-                    {[80, 160, 80, 40, 70, 80, 60].map((w, j) => (
-                      <td key={j}>
-                        <div
-                          className="skeleton"
-                          style={{ width: w, height: 14 }}
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : sorted.length === 0 ? (
-                <tr>
-                  <td colSpan={7}>
-                    <div className="empty">
-                      <div className="empty-icon">◈</div>
-                      <h3>No orders found</h3>
-                      <p>Try adjusting your filters</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                sorted.map((order) => (
-                  <tr key={order.id} onClick={() => setSelectedOrder(order)}>
-                    <td className="td-id">{order.id}</td>
-                    <td>
-                      <div className="td-customer">{order.customer}</div>
-                      <div className="td-email">{order.email}</div>
-                    </td>
-                    <td>
-                      <span className={`badge badge-${order.status}`}>
-                        <span className="badge-dot" />
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="td-mono">
-                      {order.items.length} item
-                      {order.items.length !== 1 ? "s" : ""}
-                    </td>
-                    <td className="td-total">${order.total.toFixed(2)}</td>
-                    <td className="td-mono">{order.createdAt}</td>
-                    <td>
-                      <div className="row-actions">
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedOrder(order);
-                          }}
-                        >
-                          View
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <DataTable
+            storageKey="orders_sort"
+            rowKey="id"
+            onRowClick={setSelectedOrder}
+            isLoading={isLoading}
+            data={sorted}
+            columns={[
+              { key: "id", header: "Order", width: 120, sortable: true },
+              {
+                key: "customer",
+                header: "Customer",
+                sortable: true,
+                render: (row) => <span>{row.customer}</span>,
+              },
+              {
+                key: "status",
+                header: "Status",
+                render: (row) => (
+                  <span className={`badge badge-${row.status}`}>
+                    {row.status}
+                  </span>
+                ),
+              },
+              {
+                key: "total",
+                header: "Total",
+                sortable: true,
+                render: (row) => `$${row.total.toFixed(2)}`,
+              },
+              { key: "createdAt", header: "Date", sortable: true },
+            ]}
+          />
           {sorted.length > 0 && (
             <div className="end-msg">— {sorted.length} orders —</div>
           )}
