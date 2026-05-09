@@ -1,0 +1,13 @@
+{
+  "ci": {
+    "collect": {
+      "url": ["http://localhost:3000", "http://localhost:3000/products"],
+      "numberOfRuns": 2,
+      "settings": {
+        "chromeFlags": "--no-sandbox --headless --disable-gpu"
+      }
+    },
+    "assert": { "preset": "lighthouse:no-pwa" },
+    "upload": { "target": "temporary-public-storage" }
+  }
+}

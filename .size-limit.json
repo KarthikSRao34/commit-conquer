@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Storefront JS",
+    "path": "apps/storefront/dist/assets/*.js",
+    "limit": "300 kB"
+  },
+  {
+    "name": "Storefront CSS",
+    "path": "apps/storefront/dist/assets/*.css",
+    "limit": "50 kB"
+  }
+]
