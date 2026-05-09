@@ -9,10 +9,18 @@
     "allowImportingTsExtensions": true,
     "strict": false,
     "skipLibCheck": true,
-    "outDir": "dist"
+    "noEmit": true,
+    "rootDir": "."
   },
   "ts-node": {
-    "transpileOnly": false,
+    "transpileOnly": true,
     "swc": false
-  }
+  },
+  "include": [
+    "packages/**/*.ts",
+    "packages/**/*.js",
+    "infra/**/*.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": ["node_modules", "apps"]
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useReducer } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -7,8 +7,68 @@ import {
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Checkbox from "@radix-ui/react-checkbox";
 import * as Select from "@radix-ui/react-select";
-import { useCartState, useCartDispatch } from "../storefront/Layout";
 
+
+// ─── Local Cart State (self-contained, no storefront dependency) ─────────────
+function cartReducer(state, action) {
+  switch (action.type) {
+    case "ADD": {
+      const exists = state.items.find((i) => i.id === action.payload.id);
+      if (exists)
+        return {
+          ...state,
+          items: state.items.map((i) =>
+            i.id === action.payload.id
+              ? { ...i, quantity: i.quantity + 1 }
+              : i
+          ),
+        };
+      return {
+        ...state,
+        items: [...state.items, { ...action.payload, quantity: 1 }],
+      };
+    }
+    case "REMOVE":
+      return {
+        ...state,
+        items: state.items.filter((i) => i.id !== action.payload),
+      };
+    case "UPDATE_QTY":
+      if (action.payload.quantity <= 0)
+        return {
+          ...state,
+          items: state.items.filter((i) => i.id !== action.payload.id),
+        };
+      return {
+        ...state,
+        items: state.items.map((i) =>
+          i.id === action.payload.id
+            ? { ...i, quantity: action.payload.quantity }
+            : i
+        ),
+      };
+    case "CLEAR":
+      return { ...state, items: [] };
+    default:
+      return state;
+  }
+}
+
+function useLocalCart() {
+  const [state, dispatch] = useReducer(cartReducer, { items: [] });
+  const itemCount = state.items.reduce((n, i) => n + i.quantity, 0);
+  const total = state.items.reduce((s, i) => s + i.price * i.quantity, 0);
+  return {
+    items: state.items,
+    itemCount,
+    total,
+    addItem: (item) => dispatch({ type: "ADD", payload: item }),
+    removeItem: (id) => dispatch({ type: "REMOVE", payload: id }),
+    updateQty: (id, quantity) =>
+      dispatch({ type: "UPDATE_QTY", payload: { id, quantity } }),
+    clearCart: () => dispatch({ type: "CLEAR" }),
+  };
+}
 
 // ─── Mock Medusa SDK (replace with your actual client) ───────────────────────
 const fetchProducts = async ({ pageParam = 0, filters }) => {
@@ -547,9 +607,7 @@ const css = `
 `;
 
 // ─── Inline CartDrawer (slide-over panel) ────────────────────────────────────
-function CartPanel({ open, onClose, setInventoryMap }) {
-  const { items, itemCount, total } = useCartState();
-  const { removeItem, updateQty, clearCart } = useCartDispatch();
+function CartPanel({ open, onClose, setInventoryMap, items, itemCount, total, removeItem, updateQty, clearCart }) {
 
   if (!open) return null;
 
@@ -670,7 +728,7 @@ function CartPanel({ open, onClose, setInventoryMap }) {
               <span className="cart-total-label">Total</span>
               <span className="cart-total-val">${total.toFixed(2)}</span>
             </div>
-            <button className="btn-checkout" onClick={() => navigate('/checkout')}>
+            <button className="btn-checkout" onClick={() => alert('Checkout: navigate to /checkout')}>
               <svg
                 width="14"
                 height="14"
@@ -709,8 +767,7 @@ export default function ProductsPage() {
   const [inventoryMap, setInventoryMap] = useState({});
   // Cart panel state
   const [cartOpen, setCartOpen] = useState(false);
-  const { itemCount } = useCartState();
-  const { addItem } = useCartDispatch();
+  const { items: cartItems, itemCount, total: cartTotal, addItem, removeItem, updateQty, clearCart } = useLocalCart();
 
   // Debounce search
   useEffect(() => {
@@ -1241,6 +1298,12 @@ export default function ProductsPage() {
         open={cartOpen}
         onClose={() => setCartOpen(false)}
         setInventoryMap={setInventoryMap}
+        items={cartItems}
+        itemCount={itemCount}
+        total={cartTotal}
+        removeItem={removeItem}
+        updateQty={updateQty}
+        clearCart={clearCart}
       />
     </>
   );
