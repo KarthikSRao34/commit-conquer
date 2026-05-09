@@ -20,18 +20,21 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Layout from "./Layout";
 
 // ── Storefront pages ───────────────────────────────────────────────────────────
-import StorefrontHome from "./pages/index";
-const CheckoutPage    = lazy(() => import("./pages/CheckoutForm"));
-const ProductDetail   = lazy(() => import("./pages/product-detail"));
+// All pages are lazy so Suspense covers them uniformly and the entry
+// chunk stays lean. StorefrontHome was previously an eager import which
+// bypassed Suspense and inflated the initial bundle.
+const StorefrontHome = lazy(() => import("./pages/index"));
+const CheckoutPage = lazy(() => import("./pages/CheckoutForm"));
+const ProductDetail = lazy(() => import("./pages/product-detail"));
 const CollectionsPage = lazy(() => import("./pages/collections"));
-const AboutPage       = lazy(() => import("./pages/about"));
-const AccountPage     = lazy(() => import("./pages/account"));
+const AboutPage = lazy(() => import("./pages/about"));
+const AccountPage = lazy(() => import("./pages/account"));
 
 // ── Admin pages ────────────────────────────────────────────────────────────────
-const AdminLayout    = lazy(() => import("./pages/admin/AdminLayout"));
+const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/dashboard"));
-const AdminProducts  = lazy(() => import("./pages/admin/products"));
-const AdminOrders    = lazy(() => import("./pages/admin/orders"));
+const AdminProducts = lazy(() => import("./pages/admin/products"));
+const AdminOrders = lazy(() => import("./pages/admin/orders"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -39,13 +42,23 @@ const queryClient = new QueryClient({
 
 function PageLoader() {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "60vh",
+      }}
+    >
       <div style={{ color: "#7c6aff", fontSize: 14 }}>Loading…</div>
     </div>
   );
 }
 
-createRoot(document.getElementById("root")!).render(
+const rootEl = document.getElementById("root");
+if (!rootEl) throw new Error("Root element #root not found in index.html");
+
+createRoot(rootEl).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
@@ -53,20 +66,23 @@ createRoot(document.getElementById("root")!).render(
           <Routes>
             {/* ── Storefront routes (with header/cart layout) ── */}
             <Route element={<Layout />}>
-              <Route path="/"                    element={<StorefrontHome />} />
-              <Route path="/products/:handle"    element={<ProductDetail />} />
-              <Route path="/checkout"            element={<CheckoutPage />} />
-              <Route path="/collections"         element={<CollectionsPage />} />
-              <Route path="/collections/:handle" element={<CollectionsPage />} />
-              <Route path="/about"               element={<AboutPage />} />
-              <Route path="/account"             element={<AccountPage />} />
+              <Route path="/" element={<StorefrontHome />} />
+              <Route path="/products/:handle" element={<ProductDetail />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/collections" element={<CollectionsPage />} />
+              <Route
+                path="/collections/:handle"
+                element={<CollectionsPage />}
+              />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/account" element={<AccountPage />} />
             </Route>
 
             {/* ── Admin routes (separate layout, no storefront header) ── */}
             <Route path="/admin" element={<AdminLayout />}>
-              <Route index            element={<AdminDashboard />} />
-              <Route path="products"  element={<AdminProducts />} />
-              <Route path="orders"    element={<AdminOrders />} />
+              <Route index element={<AdminDashboard />} />
+              <Route path="products" element={<AdminProducts />} />
+              <Route path="orders" element={<AdminOrders />} />
             </Route>
 
             {/* ── Fallback ── */}
@@ -75,5 +91,5 @@ createRoot(document.getElementById("root")!).render(
         </Suspense>
       </BrowserRouter>
     </QueryClientProvider>
-  </StrictMode>
+  </StrictMode>,
 );
