@@ -8,7 +8,8 @@
 
 import { createTestServer, AUTH_TOKEN, INVALID_TOKEN } from '../helpers/testServer';
 import { describe, it, beforeEach, expect } from '@jest/globals';
-import { CommitService, UserService } from '../../packages/server/src/services';
+import { UserService } from '../../packages/server/src/services/userService';
+import { CommitService } from '../../packages/server/src/services/commitService';
 import { mockCommits } from '../fixtures/commits';
 import { mockUsers } from '../fixtures/users';
 
@@ -16,7 +17,15 @@ const { request } = createTestServer();
 
 // Re-seed stores to a clean known state before every test
 beforeEach(() => {
-  new CommitService()._reset([...mockCommits.map((c) => ({ ...c }))]);
+  new CommitService()._reset([
+    ...mockCommits.map((c) => ({
+      ...c,
+      points: c.points ?? 0,
+      createdAt: c.createdAt
+        ? (c.createdAt instanceof Date ? c.createdAt : new Date(c.createdAt))
+        : new Date(),
+    })),
+  ]);
   new UserService()._reset([...mockUsers.map((u) => ({ ...u }))]);
 });
 
