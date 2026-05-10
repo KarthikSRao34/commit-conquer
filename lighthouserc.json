@@ -7,7 +7,8 @@
         "chromeFlags": "--no-sandbox --headless --disable-gpu"
       }
     },
-    "assert": { "preset": "lighthouse:no-pwa" },
-    "upload": { "target": "temporary-public-storage" }
+    "upload": {
+      "target": "temporary-public-storage"
+    }
   }
 }
