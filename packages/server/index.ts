@@ -279,6 +279,15 @@ store.post("/auth/reset-password/confirm", async (req, res) => {
   } catch (e) { handleErr(e, res); }
 });
 
+// POST /api/store/auth/google
+// Body: { credential: google_id_token }
+store.post("/auth/google", async (req, res) => {
+  try {
+    const result = await AuthService.googleLogin(req.body.credential);
+    res.json(result);
+  } catch (e) { handleErr(e, res); }
+});
+
 // ── Cart ──────────────────────────────────────────────────────────────────────
 
 // POST /api/store/carts
