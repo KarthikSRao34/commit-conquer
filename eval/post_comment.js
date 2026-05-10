@@ -82,8 +82,8 @@ async function main() {
     }
 
     if (!process.env.GITHUB_TOKEN) {
-      console.error('ERROR: GITHUB_TOKEN env var is missing, procedeeing without it');
-      // process.exit(1);
+      console.error('ERROR: GITHUB_TOKEN env var is missing');
+      process.exit(1);
     }
 
     const score = readJsonFile(path.join('eval_results', 'score.json'), {

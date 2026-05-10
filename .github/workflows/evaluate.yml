@@ -2,12 +2,10 @@ name: Evaluate PR
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
 
 permissions:
-  pull-requests: write
   contents: read
-  issues: write
 
 jobs:
   evaluate:
@@ -82,28 +80,3 @@ jobs:
           name: score-pr-${{ github.event.pull_request.number }}
           path: eval_results/
           retention-days: 1
-
-  comment:
-    runs-on: ubuntu-latest
-    needs: evaluate
-    if: always()
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Download score artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: score-pr-${{ github.event.pull_request.number }}
-          path: eval_results/
-
-      - name: Post PR comment
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
-          PR_CREATED_AT: ${{ github.event.pull_request.created_at }}
-        run: node eval/post_comment.js
