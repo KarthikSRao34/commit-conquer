@@ -76,12 +76,15 @@ jobs:
 
       - name: Compute score
         run: node eval/compute_score.js
-
-      - name: LLM review
         continue-on-error: true
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: node eval/llm_review.js
+
+      - name: Debug results
+        run: |
+          echo "=== eval_results contents ==="
+          ls -la eval_results/ || echo "eval_results dir missing"
+          echo "=== score.json ==="
+          cat eval_results/score.json || echo "score.json missing"
+        continue-on-error: true
 
       - name: Post PR comment
         env:
