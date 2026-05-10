@@ -86,6 +86,16 @@ jobs:
           echo "=== score.json ==="
           cat eval_results/score.json || echo "score.json missing"
         continue-on-error: true
+      
+      - name: Debug secret
+        run: |
+          if [ -z "$BOT_TOKEN" ]; then
+          echo "BOT_TOKEN is EMPTY or NOT SET"
+          else
+          echo "BOT_TOKEN is SET"
+          fi
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
 
       - name: Post PR comment
         env:
