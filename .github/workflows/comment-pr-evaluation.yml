@@ -23,20 +23,19 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Resolve PR number from event payload
-        id: pr
-        run: |
-          PR_NUMBER="$(jq -r '.workflow_run.pull_requests[0].number // empty' "$GITHUB_EVENT_PATH")"
-          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-
       - name: Download score artifact from evaluate run
-        if: ${{ steps.pr.outputs.pr_number != '' }}
         uses: actions/download-artifact@v4
         with:
-          name: score-pr-${{ steps.pr.outputs.pr_number }}
+          name: score-run-${{ github.event.workflow_run.id }}
           path: eval_results/
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve PR number from artifact metadata
+        id: pr
+        run: |
+          PR_NUMBER="$(cat eval_results/pr_number.txt 2>/dev/null || true)"
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Post PR comment
         if: ${{ steps.pr.outputs.pr_number != '' }}
