@@ -21,6 +21,8 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.2",
     "concurrently": "^9.1.0",
+    "react-refresh": "^0.17.0",
+    "rollup": "^4.60.3",
     "vite": "^5.4.10"
   }
 }
