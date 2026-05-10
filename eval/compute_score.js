@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DEADLINE = '2025-12-31T23:59:59Z';
+const DEADLINE = "2026-05-10T18:30:00Z";
 
 function readJsonFile(filePath, defaultValue = {}) {
   try {

@@ -1,5 +1,5 @@
-eval/                    @your-org/organizers
-.github/workflows/       @your-org/organizers
-.github/CODEOWNERS       @your-org/organizers
-lighthouserc.json        @your-org/organizers
-.size-limit.json         @your-org/organizers
+eval/                    @Commit-Conquer/organizers
+.github/workflows/       @Commit-Conquer/organizers
+.github/CODEOWNERS       @Commit-Conquer/organizers
+lighthouserc.json        @Commit-Conquer/organizers
+.size-limit.json         @Commit-Conquer/organizers
