@@ -2,13 +2,19 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT:', err.message);
+  console.error(err.stack);
+  process.exit(1);
+});
+
 function readJsonFile(filePath, defaultValue = {}) {
   try {
     if (fs.existsSync(filePath)) {
       return JSON.parse(fs.readFileSync(filePath, 'utf8'));
     }
   } catch (err) {
-    // ignore
+    console.error(`Failed to read ${filePath}:`, err.message);
   }
   return defaultValue;
 }
@@ -39,14 +45,25 @@ function githubRequest(method, pathname, body) {
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         try {
-          resolve(JSON.parse(data || '{}'));
+          const parsed = JSON.parse(data || '{}');
+          if (res.statusCode >= 400) {
+            console.error(`GitHub API ${method} ${pathname} → ${res.statusCode}:`, JSON.stringify(parsed));
+          } else {
+            console.log(`GitHub API ${method} ${pathname} → ${res.statusCode}`);
+          }
+          resolve(parsed);
         } catch (err) {
+          console.error(`Failed to parse response for ${method} ${pathname}:`, err.message);
           resolve({});
         }
       });
     });
 
-    req.on('error', reject);
+    req.on('error', (err) => {
+      console.error(`Request error for ${method} ${pathname}:`, err.message);
+      reject(err);
+    });
+
     if (body) req.write(typeof body === 'string' ? body : JSON.stringify(body));
     req.end();
   });
@@ -56,6 +73,18 @@ async function main() {
   try {
     const repo = process.env.REPO;
     const prNumber = process.env.PR_NUMBER;
+
+    console.log(`Posting comment to repo=${repo} pr=${prNumber}`);
+
+    if (!repo || !prNumber) {
+      console.error('ERROR: REPO or PR_NUMBER env var is missing');
+      process.exit(1);
+    }
+
+    if (!process.env.GITHUB_TOKEN) {
+      console.error('ERROR: GITHUB_TOKEN env var is missing');
+      process.exit(1);
+    }
 
     const score = readJsonFile(path.join('eval_results', 'score.json'), {
       status: 'ACCEPTED',
@@ -75,18 +104,23 @@ async function main() {
       be_breakdown: {},
     });
 
-    const llmReview = readJsonFile(path.join('eval_results', 'llm_review.json'), {
-      review: '',
-    });
+    console.log('Score loaded:', JSON.stringify(score, null, 2));
+
+    const llmReview = readJsonFile(path.join('eval_results', 'llm_review.json'), { review: '' });
 
     // Step 1: Delete previous bot comments
+    console.log('Fetching existing comments...');
     const comments = await githubRequest('GET', `/repos/${repo}/issues/${prNumber}/comments`);
     if (Array.isArray(comments)) {
+      console.log(`Found ${comments.length} existing comments`);
       for (const comment of comments) {
         if (comment.body && comment.body.includes('## Automated PR Evaluation')) {
+          console.log(`Deleting previous bot comment id=${comment.id}`);
           await githubRequest('DELETE', `/repos/${repo}/issues/comments/${comment.id}`);
         }
       }
+    } else {
+      console.error('Unexpected comments response:', JSON.stringify(comments));
     }
 
     // Step 2: Build comment
@@ -101,18 +135,6 @@ async function main() {
       const lintIcon =
         (score.issue_count || 0) === 0 ? '✅' :
         (score.issue_count || 0) <= 5 ? '⚠️' : '❌';
-
-      let lintIssuesBlock = '';
-      if (score.lint_issues && score.lint_issues.length > 0) {
-        lintIssuesBlock = `<details><summary>Lint details</summary>
-
-\`\`\`
-${score.lint_issues.slice(0, 5).join('\n')}
-\`\`\`
-</details>
-
-`;
-      }
 
       const lhMetrics = score.lh_metrics || {};
       const beMetrics = score.be_metrics || {};
@@ -138,20 +160,23 @@ ${score.lint_issues.slice(0, 5).join('\n')}
       const summaryTable = `| Category        | Score          | Max    |
 |:----------------|---------------:|-------:|
 | Correctness     | skipped        | gate   |
-| Code quality    | ${Math.round(score.quality_score || 0)}| 20     |
-| Coverage        | ${Math.round(score.coverage_score || 0)}| 10    |
-| Frontend perf   | ${Math.round(score.frontend_score || 0)}| 25    |
+| Code quality    | ${Math.round(score.quality_score || 0)} | 20     |
+| Coverage        | ${Math.round(score.coverage_score || 0)} | 10    |
+| Frontend perf   | ${Math.round(score.frontend_score || 0)} | 25    |
 | Backend perf    | ${Math.round(score.backend_score || 0)} | 25    |
-| Bundle size     | ${Math.round(score.bundle_score || 0)}  | 10    |
+| Bundle size     | ${Math.round(score.bundle_score || 0)} | 10    |
 | **Automated**   | **${Math.round(score.final_score || 0)}** | **90** |
-| Manual (judges) | __             | 10     |
-| **TOTAL**       | __             | **100** |`;
+| Manual (judges) | \_\_ | 10     |
+| **TOTAL**       | \_\_ | **100** |`;
+
+      let lintIssuesBlock = '';
+      if (score.lint_issues && score.lint_issues.length > 0) {
+        lintIssuesBlock = `\n<details><summary>Lint details</summary>\n\n\`\`\`\n${score.lint_issues.slice(0, 5).join('\n')}\n\`\`\`\n</details>\n`;
+      }
 
       let aiSection = '';
       if (llmReview.review && llmReview.review.trim()) {
-        aiSection = `---
-### 🤖 AI Code Review
-${llmReview.review}`;
+        aiSection = `\n---\n### 🤖 AI Code Review\n${llmReview.review}`;
       }
 
       commentBody = `## Automated PR Evaluation
@@ -169,18 +194,33 @@ ${beTable}
 ${summaryTable}
 
 🚀 **Accepted for automated review — awaiting judge scoring**
-
 ${lintIssuesBlock}${aiSection}`;
     }
 
     // Step 3: Post comment
-    await githubRequest('POST', `/repos/${repo}/issues/${prNumber}/comments`, {
-      body: commentBody,
-    });
+    console.log('Posting comment...');
+    const postResult = await githubRequest(
+      'POST',
+      `/repos/${repo}/issues/${prNumber}/comments`,
+      { body: commentBody }
+    );
+
+    if (postResult.id) {
+      console.log('SUCCESS — comment posted:', postResult.html_url);
+    } else {
+      console.error('FAILED — unexpected response:', JSON.stringify(postResult));
+      process.exit(1);
+    }
+
   } catch (err) {
-    console.error('Error in post_comment.js:', err);
+    console.error('MAIN ERROR:', err.message);
+    console.error(err.stack);
     process.exit(1);
   }
 }
 
-main();
+main().catch(err => {
+  console.error('MAIN ERROR:', err.message);
+  console.error(err.stack);
+  process.exit(1);
+});
