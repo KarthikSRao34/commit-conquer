@@ -21,7 +21,7 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Install global tools
         run: npm install -g ts-node typescript
@@ -37,7 +37,7 @@ jobs:
         continue-on-error: true
         run: |
           PORT=4000 CORS_ORIGIN=http://localhost:3000 ADMIN_SECRET=admin_dev_secret NODE_ENV=test \
-          npx ts-node packages/server/index.ts &
+          npm run start:server &
           echo $! > eval_results/backend.pid
           sleep 8
 
