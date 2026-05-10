@@ -89,6 +89,7 @@ async function main() {
     const score = readJsonFile(path.join('eval_results', 'score.json'), {
       status: 'ACCEPTED',
       reason: null,
+      tests_passed: false,
       issue_count: 0,
       error_count: 0,
       warning_count: 0,
@@ -107,6 +108,10 @@ async function main() {
     console.log('Score loaded:', JSON.stringify(score, null, 2));
 
     const llmReview = readJsonFile(path.join('eval_results', 'llm_review.json'), { review: '' });
+    const testResult = readJsonFile(path.join('eval_results', 'test_result.json'), {
+      tests_passed: false,
+      command: 'npm test',
+    });
 
     // Step 1: Delete previous bot comments
     console.log('Fetching existing comments...');
@@ -131,7 +136,8 @@ async function main() {
 
 🚫 **Rejected — submitted after the event deadline.**`;
     } else {
-      const testIcon = '⏭️';
+      const testIcon = score.tests_passed ? '✅' : '❌';
+      const testLabel = score.tests_passed ? 'Passed' : 'Failed';
       const lintIcon =
         (score.issue_count || 0) === 0 ? '✅' :
         (score.issue_count || 0) <= 5 ? '⚠️' : '❌';
@@ -181,7 +187,7 @@ async function main() {
 
       commentBody = `## Automated PR Evaluation
 
-${testIcon} **Tests:** Skipped (no test suite)
+    ${testIcon} **Tests:** ${testLabel} (${testResult.command || 'npm test'})
 ${lintIcon} **Lint:** ${score.issue_count || 0} issues (${score.error_count || 0} errors, ${score.warning_count || 0} warnings)
 
 ### Frontend Performance

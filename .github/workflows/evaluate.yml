@@ -25,10 +25,28 @@ jobs:
       - name: Install global tools
         run: npm install -g ts-node typescript
 
+      - name: Install test dependencies
+        run: npm ci --prefix tests --legacy-peer-deps
+
       - name: Create results directory
         run: |
           mkdir -p eval_results
           echo "${{ github.event.pull_request.number }}" > eval_results/pr_number.txt
+
+      - name: Run tests
+        continue-on-error: true
+        run: |
+          set +e
+          cd tests
+          npm test > ../eval_results/test_output.log 2>&1
+          TEST_EXIT_CODE=$?
+          if [ "$TEST_EXIT_CODE" -eq 0 ]; then
+            TESTS_PASSED=true
+          else
+            TESTS_PASSED=false
+          fi
+          printf '{"tests_passed":%s,"command":"npm test","exit_code":%s}\n' "$TESTS_PASSED" "$TEST_EXIT_CODE" > ../eval_results/test_result.json
+          exit 0
 
       - name: Run lint
         continue-on-error: true
