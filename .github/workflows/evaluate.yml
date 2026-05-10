@@ -21,7 +21,10 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: |
+          npm cache clean --force
+          rm -rf node_modules package-lock.json
+          npm install --legacy-peer-deps
 
       - name: Install global tools
         run: npm install -g ts-node typescript
