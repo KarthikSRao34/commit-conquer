@@ -18,4 +18,12 @@ module.exports = {
   globalTeardown: '<rootDir>/global-teardown.ts',
   setupFilesAfterEnv: ['<rootDir>/setup.ts'],
   testTimeout: 15000,
+  collectCoverage: true,
+  collectCoverageFrom: [
+    '../packages/server/src/**/*.ts',
+    '!**/*.d.ts',
+    '!**/node_modules/**',
+  ],
+  coverageDirectory: '../eval_results/coverage',
+  coverageReporters: ['json-summary', 'text', 'lcov'],
 };

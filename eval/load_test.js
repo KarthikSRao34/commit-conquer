@@ -84,8 +84,6 @@ export default function () {
 }
 
 export function handleSummary(data) {
-  const fs = require('fs');
-  
   const summary = {
     p95_latency_ms: Math.round(data.metrics.http_req_duration.values['p(95)'] || 0),
     avg_latency_ms: Math.round(data.metrics.http_req_duration.values.avg || 0),
@@ -94,10 +92,8 @@ export function handleSummary(data) {
     max_vus: data.metrics.vus_max.values.value || 0,
   };
 
-  fs.writeFileSync(
-    'eval_results/k6_summary.json',
-    JSON.stringify(summary, null, 2)
-  );
-
-  return {};
+  // k6 does not support Node's require('fs'). Return a map so k6 writes the file natively.
+  return {
+    'eval_results/k6_summary.json': JSON.stringify(summary, null, 2),
+  };
 }

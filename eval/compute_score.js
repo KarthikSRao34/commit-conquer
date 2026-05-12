@@ -67,7 +67,12 @@ try {
 
   // Calculate scores
   const qualityScore = Math.max(0, 20 - (lintResult.issue_count || 0) * 2);
-  const coverageScore = 0; // Default since coverage file doesn't exist
+  // Calculate coverage from jest's coverage-summary.json
+  let coveragePct = 0;
+  if (coverageData && coverageData.total && coverageData.total.lines) {
+    coveragePct = coverageData.total.lines.pct || 0;
+  }
+  const coverageScore = Math.round((Math.min(coveragePct, 100) / 100) * 10);
   const frontendScore = lighthouseResult.frontend_score || 0;
   const backendScore = backendResult.backend_score || 0;
   
@@ -86,7 +91,7 @@ try {
     issue_count: lintResult.issue_count || 0,
     error_count: lintResult.error_count || 0,
     warning_count: lintResult.warning_count || 0,
-    coverage_pct: 0,
+    coverage_pct: Math.round(coveragePct * 10) / 10,
     quality_score: Math.round(qualityScore),
     coverage_score: coverageScore,
     frontend_score: Math.round(frontendScore),
