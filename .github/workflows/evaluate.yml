@@ -32,7 +32,7 @@ jobs:
          cd ..
 
       - name: Clean install test dependencies
-        run: npm ci --prefix tests --legacy-peer-deps
+        run: npm install --prefix tests --legacy-peer-deps
 
       - name: Create results directory
         run: |
