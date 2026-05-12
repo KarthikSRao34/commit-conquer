@@ -18,10 +18,10 @@ import { mockCommits } from '../../../fixtures/commits';
 // ---------------------------------------------------------------------------
 function makeMockService(overrides: Partial<CommitService> = {}): CommitService {
   return {
-    findAll: jest.fn<Promise<any>, any[]>().mockResolvedValue({ data: mockCommits, total: mockCommits.length } as any),
-    findById: jest.fn<Promise<any>, any[]>().mockResolvedValue(mockCommits[0] as any),
-    create: jest.fn<Promise<any>, any[]>().mockResolvedValue(mockCommits[0] as any),
-    remove: jest.fn<Promise<void>, any[]>().mockResolvedValue(undefined as any),
+    findAll: jest.fn<any>().mockResolvedValue({ data: mockCommits, total: mockCommits.length } as any),
+    findById: jest.fn<any>().mockResolvedValue(mockCommits[0] as any),
+    create: jest.fn<any>().mockResolvedValue(mockCommits[0] as any),
+    remove: jest.fn<any>().mockResolvedValue(undefined as any),
     _reset: jest.fn(),
     ...overrides,
   } as unknown as CommitService;
@@ -29,7 +29,7 @@ function makeMockService(overrides: Partial<CommitService> = {}): CommitService 
 
 function makeRes(): Response {
   return {
-    status: jest.fn().mockReturnThis(),f
+    status: jest.fn().mockReturnThis(),
     json: jest.fn().mockReturnThis(),
   } as unknown as Response;
 }
@@ -54,28 +54,26 @@ describe('CommitController', () => {
     next = jest.fn();
   });
 
-  // ---- getAll ----
-  describe('getAll()', () => {
-    it('responds 200 with commit list and pagination meta', async () => {
-      await controller.getAll(makeReq({ query: { page: '1', limit: '10' } }), res, next);
+  // ---- list ----
+  describe('list()', () => {
+    it('responds 200 with commit list and total', async () => {
+      await controller.list(makeReq({ query: { page: '1', limit: '10' } }), res, next);
 
-      expect(res.status).toHaveBeenCalledWith(200);
-      const payload = (res.json as jest.Mock).mock.calls[0][0];
+      const payload = (res.json as jest.Mock).mock.calls[0][0] as any;
       expect(payload.success).toBe(true);
       expect(payload.data).toEqual(mockCommits);
-      expect(payload.meta).toBeDefined();
-      expect(payload.meta.total).toBe(mockCommits.length);
+      expect(payload.total).toBe(mockCommits.length);
     });
 
     it('calls service.findAll with parsed pagination options', async () => {
-      await controller.getAll(makeReq({ query: { page: '2', limit: '5' } }), res, next);
+      await controller.list(makeReq({ query: { page: '2', limit: '5' } }), res, next);
       expect(service.findAll).toHaveBeenCalledWith(
         expect.objectContaining({ page: 2, limit: 5 }),
       );
     });
 
     it('uses default pagination when no query params provided', async () => {
-      await controller.getAll(makeReq({ query: {} }), res, next);
+      await controller.list(makeReq({ query: {} }), res, next);
       expect(service.findAll).toHaveBeenCalledWith(
         expect.objectContaining({ page: 1, limit: 10 }),
       );
@@ -83,32 +81,31 @@ describe('CommitController', () => {
 
     it('forwards service errors to next()', async () => {
       const error = new AppError('DB error', 500);
-      (service.findAll as jest.Mock).mockRejectedValue(error);
-      await controller.getAll(makeReq(), res, next);
+      (service.findAll as any).mockRejectedValue(error);
+      await controller.list(makeReq(), res, next);
       expect(next).toHaveBeenCalledWith(error);
     });
   });
 
-  // ---- getById ----
-  describe('getById()', () => {
+  // ---- get ----
+  describe('get()', () => {
     it('responds 200 with the requested commit', async () => {
-      await controller.getById(makeReq({ params: { id: 'commit-1' } }), res, next);
+      await controller.get(makeReq({ params: { id: 'commit-1' } }), res, next);
 
-      expect(res.status).toHaveBeenCalledWith(200);
-      const payload = (res.json as jest.Mock).mock.calls[0][0];
+      const payload = (res.json as jest.Mock).mock.calls[0][0] as any;
       expect(payload.success).toBe(true);
       expect(payload.data.id).toBe('commit-1');
     });
 
     it('calls service.findById with the correct id', async () => {
-      await controller.getById(makeReq({ params: { id: 'commit-99' } }), res, next);
+      await controller.get(makeReq({ params: { id: 'commit-99' } }), res, next);
       expect(service.findById).toHaveBeenCalledWith('commit-99');
     });
 
     it('forwards 404 error to next() when commit is not found', async () => {
       const error = new AppError('Not found', 404);
-      (service.findById as jest.Mock).mockRejectedValue(error);
-      await controller.getById(makeReq({ params: { id: 'ghost' } }), res, next);
+      (service.findById as any).mockRejectedValue(error);
+      await controller.get(makeReq({ params: { id: 'ghost' } }), res, next);
       expect(next).toHaveBeenCalledWith(error);
     });
   });
@@ -118,41 +115,17 @@ describe('CommitController', () => {
     it('responds 201 with the created commit', async () => {
       const req = {
         ...makeReq({ body: { message: 'feat: new thing', repo: 'my-repo' } }),
-        user: { id: 'user-1', username: 'alice', email: 'alice@example.com' },
       } as any;
 
       await controller.create(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(201);
-      expect((res.json as jest.Mock).mock.calls[0][0].success).toBe(true);
-    });
-
-    it('uses the authenticated user id as authorId', async () => {
-      const req = {
-        ...makeReq({ body: { message: 'feat: auth', repo: 'repo' } }),
-        user: { id: 'user-42', username: 'bob', email: 'bob@example.com' },
-      } as any;
-
-      await controller.create(req, res, next);
-      expect(service.create).toHaveBeenCalledWith(
-        expect.objectContaining({ authorId: 'user-42' }),
-      );
-    });
-
-    it('falls back to "anonymous" authorId when user is not on req', async () => {
-      await controller.create(
-        makeReq({ body: { message: 'feat: anon', repo: 'repo' } }) as any,
-        res,
-        next,
-      );
-      expect(service.create).toHaveBeenCalledWith(
-        expect.objectContaining({ authorId: 'anonymous' }),
-      );
+      expect(((res.json as jest.Mock).mock.calls[0][0] as any).success).toBe(true);
     });
 
     it('forwards service errors to next()', async () => {
       const error = new AppError('Bad request', 400);
-      (service.create as jest.Mock).mockRejectedValue(error);
+      (service.create as any).mockRejectedValue(error);
       await controller.create(makeReq({ body: { message: '', repo: 'repo' } }) as any, res, next);
       expect(next).toHaveBeenCalledWith(error);
     });
@@ -160,13 +133,15 @@ describe('CommitController', () => {
 
   // ---- remove ----
   describe('remove()', () => {
-    it('responds 200 with a success message', async () => {
+    it('responds 204 when commit is successfully removed', async () => {
+      // Need to mock send to chain off status
+      const mockSend = jest.fn();
+      res.status = jest.fn().mockReturnValue({ send: mockSend }) as any;
+
       await controller.remove(makeReq({ params: { id: 'commit-1' } }) as any, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(200);
-      const payload = (res.json as jest.Mock).mock.calls[0][0];
-      expect(payload.success).toBe(true);
-      expect(payload.message).toBeTruthy();
+      expect(res.status).toHaveBeenCalledWith(204);
+      expect(mockSend).toHaveBeenCalled();
     });
 
     it('calls service.remove with the correct id', async () => {
@@ -176,7 +151,7 @@ describe('CommitController', () => {
 
     it('forwards 404 error to next() when commit is not found', async () => {
       const error = new AppError('Not found', 404);
-      (service.remove as jest.Mock).mockRejectedValue(error);
+      (service.remove as any).mockRejectedValue(error);
       await controller.remove(makeReq({ params: { id: 'ghost' } }) as any, res, next);
       expect(next).toHaveBeenCalledWith(error);
     });

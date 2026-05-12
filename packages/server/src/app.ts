@@ -83,7 +83,7 @@ export function createApp() {
 
   // ── Health check ───────────────────────────────────────────────────────────
   app.get('/api/health', (_req: Request, res: Response) => {
-    res.json({ success: true, status: 'ok' });
+    res.json({ success: true, status: 'ok', timestamp: new Date().toISOString() });
   });
 
   // ── Error handler (must be last) ───────────────────────────────────────────

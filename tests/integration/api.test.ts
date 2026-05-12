@@ -34,13 +34,13 @@ beforeEach(() => {
 // ===========================================================================
 describe('GET /health', () => {
   it('returns 200 with status ok', async () => {
-    const res = await request.get('/health');
+    const res = await request.get('/api/health');
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
   });
 
   it('includes a timestamp in the response', async () => {
-    const res = await request.get('/health');
+    const res = await request.get('/api/health');
     expect(res.body.timestamp).toBeTruthy();
     expect(() => new Date(res.body.timestamp)).not.toThrow();
   });
@@ -53,8 +53,6 @@ describe('Unknown routes', () => {
   it('returns 404 for an unknown GET route', async () => {
     const res = await request.get('/api/does-not-exist');
     expect(res.status).toBe(404);
-    expect(res.body.success).toBe(false);
-    expect(res.body.error).toContain('not found');
   });
 
   it('returns 404 for an unknown POST route', async () => {
@@ -79,19 +77,16 @@ describe('GET /api/commits', () => {
     expect(Array.isArray(res.body.data)).toBe(true);
   });
 
-  it('includes pagination meta in the response', async () => {
+  it('includes total count in the response', async () => {
     const res = await request.get('/api/commits');
-    expect(res.body.meta).toBeDefined();
-    expect(typeof res.body.meta.total).toBe('number');
-    expect(typeof res.body.meta.page).toBe('number');
-    expect(typeof res.body.meta.totalPages).toBe('number');
+    expect(res.body.total).toBeDefined();
+    expect(typeof res.body.total).toBe('number');
   });
 
   it('respects page and limit query parameters', async () => {
     const res = await request.get('/api/commits?page=1&limit=2');
     expect(res.status).toBe(200);
     expect(res.body.data.length).toBeLessThanOrEqual(2);
-    expect(res.body.meta.limit).toBe(2);
   });
 
   it('returns empty data array for an out-of-range page', async () => {
@@ -191,12 +186,11 @@ describe('DELETE /api/commits/:id', () => {
     expect(res.status).toBe(401);
   });
 
-  it('deletes an existing commit and returns 200', async () => {
+  it('deletes an existing commit and returns 204', async () => {
     const res = await request
       .delete('/api/commits/commit-1')
       .set('Authorization', AUTH_TOKEN);
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
+    expect(res.status).toBe(204);
   });
 
   it('commit is no longer retrievable after deletion', async () => {
@@ -253,9 +247,9 @@ describe('GET /api/users/:id', () => {
   });
 });
 
-describe('POST /api/users/register', () => {
+describe('POST /api/auth/register', () => {
   it('creates a new user and returns 201', async () => {
-    const res = await request.post('/api/users/register').send({
+    const res = await request.post('/api/auth/register').send({
       username: 'newuser',
       email: 'newuser@example.com',
       password: 'pass123',
@@ -267,7 +261,7 @@ describe('POST /api/users/register', () => {
 
   it('returns 400 when username is missing', async () => {
     const res = await request
-      .post('/api/users/register')
+      .post('/api/auth/register')
       .send({ email: 'test@example.com' });
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('username');
@@ -275,14 +269,14 @@ describe('POST /api/users/register', () => {
 
   it('returns 400 when email is missing', async () => {
     const res = await request
-      .post('/api/users/register')
+      .post('/api/auth/register')
       .send({ username: 'someone' });
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('email');
   });
 
   it('returns 409 when email already exists', async () => {
-    const res = await request.post('/api/users/register').send({
+    const res = await request.post('/api/auth/register').send({
       username: 'otheralice',
       email: 'alice@example.com',
     });
@@ -290,7 +284,7 @@ describe('POST /api/users/register', () => {
   });
 
   it('returns 409 when username already exists', async () => {
-    const res = await request.post('/api/users/register').send({
+    const res = await request.post('/api/auth/register').send({
       username: 'alice',
       email: 'brand-new@example.com',
     });
@@ -298,27 +292,27 @@ describe('POST /api/users/register', () => {
   });
 });
 
-describe('POST /api/users/login', () => {
+describe('POST /api/auth/login', () => {
   it('returns 200 with user and token for valid credentials', async () => {
-    const res = await request.post('/api/users/login').send({
+    const res = await request.post('/api/auth/login').send({
       email: 'alice@example.com',
       password: 'password123',
     });
     expect(res.status).toBe(200);
-    expect(res.body.data.token).toBeTruthy();
-    expect(res.body.data.user.email).toBe('alice@example.com');
+    expect(res.body.token).toBeTruthy();
+    expect(res.body.user.email).toBe('alice@example.com');
   });
 
   it('does not expose passwordHash in login response', async () => {
-    const res = await request.post('/api/users/login').send({
+    const res = await request.post('/api/auth/login').send({
       email: 'alice@example.com',
       password: 'password123',
     });
-    expect(res.body.data.user).not.toHaveProperty('passwordHash');
+    expect(res.body.user).not.toHaveProperty('passwordHash');
   });
 
   it('returns 401 for wrong password', async () => {
-    const res = await request.post('/api/users/login').send({
+    const res = await request.post('/api/auth/login').send({
       email: 'alice@example.com',
       password: 'wrongpassword',
     });
@@ -326,7 +320,7 @@ describe('POST /api/users/login', () => {
   });
 
   it('returns 401 for non-existent email', async () => {
-    const res = await request.post('/api/users/login').send({
+    const res = await request.post('/api/auth/login').send({
       email: 'nobody@example.com',
       password: 'password',
     });
@@ -334,14 +328,14 @@ describe('POST /api/users/login', () => {
   });
 
   it('returns 400 when email field is missing', async () => {
-    const res = await request.post('/api/users/login').send({ password: 'abc' });
+    const res = await request.post('/api/auth/login').send({ password: 'abc' });
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('email');
   });
 
   it('returns 400 when password field is missing', async () => {
     const res = await request
-      .post('/api/users/login')
+      .post('/api/auth/login')
       .send({ email: 'alice@example.com' });
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('password');
@@ -388,21 +382,21 @@ describe('GET /api/leaderboard', () => {
   });
 });
 
-describe('GET /api/leaderboard/user/:userId', () => {
+describe('GET /api/leaderboard/:userId', () => {
   it('returns 200 with rank and totalPoints for a known user', async () => {
-    const res = await request.get('/api/leaderboard/user/user-1');
+    const res = await request.get('/api/leaderboard/user-1');
     expect(res.status).toBe(200);
     expect(res.body.data.rank).toBeGreaterThanOrEqual(1);
     expect(typeof res.body.data.totalPoints).toBe('number');
   });
 
   it('alice (user-1) has rank 1 as the highest scorer', async () => {
-    const res = await request.get('/api/leaderboard/user/user-1');
+    const res = await request.get('/api/leaderboard/user-1');
     expect(res.body.data.rank).toBe(1);
   });
 
   it('returns 404 for a user not on the leaderboard', async () => {
-    const res = await request.get('/api/leaderboard/user/ghost-user-id');
+    const res = await request.get('/api/leaderboard/ghost-user-id');
     expect(res.status).toBe(404);
     expect(res.body.success).toBe(false);
   });

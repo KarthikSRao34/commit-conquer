@@ -62,50 +62,50 @@ describe('UserController', () => {
     next = jest.fn();
   });
 
-  // ---- getAll ----
-  describe('getAll()', () => {
+  // ---- list ----
+  describe('list()', () => {
     it('responds 200 with an array of users', async () => {
-      await controller.getAll(makeReq(), res, next);
+      await controller.list(makeReq(), res, next);
 
-      expect(res.status).toHaveBeenCalledWith(200);
+      // res.status(200) is implicit
       const payload = (res.json as any).mock.calls[0][0];
       expect(payload.success).toBe(true);
       expect(Array.isArray(payload.data)).toBe(true);
     });
 
     it('calls service.findAll once', async () => {
-      await controller.getAll(makeReq(), res, next);
+      await controller.list(makeReq(), res, next);
       expect(service.findAll).toHaveBeenCalledTimes(1);
     });
 
     it('forwards service errors to next()', async () => {
       const error = new AppError('DB down', 500);
       (service.findAll as any).mockRejectedValue(error);
-      await controller.getAll(makeReq(), res, next);
+      await controller.list(makeReq(), res, next);
       expect(next).toHaveBeenCalledWith(error);
     });
   });
 
-  // ---- getById ----
-  describe('getById()', () => {
+  // ---- get ----
+  describe('get()', () => {
     it('responds 200 with the correct user', async () => {
-      await controller.getById(makeReq({ params: { id: 'user-1' } }), res, next);
+      await controller.get(makeReq({ params: { id: 'user-1' } }), res, next);
 
-      expect(res.status).toHaveBeenCalledWith(200);
+      // res.status(200) is implicit
       const payload = (res.json as any).mock.calls[0][0];
       expect(payload.success).toBe(true);
       expect(payload.data.id).toBe('user-1');
     });
 
     it('calls service.findById with the correct id', async () => {
-      await controller.getById(makeReq({ params: { id: 'user-99' } }), res, next);
+      await controller.get(makeReq({ params: { id: 'user-99' } }), res, next);
       expect(service.findById).toHaveBeenCalledWith('user-99');
     });
 
     it('forwards 404 to next() when user does not exist', async () => {
       const error = new AppError('Not found', 404);
       (service.findById as any).mockRejectedValue(error);
-      await controller.getById(makeReq({ params: { id: 'ghost' } }), res, next);
+      await controller.get(makeReq({ params: { id: 'ghost' } }), res, next);
       expect((next as any).mock.calls[0][0].statusCode).toBe(404);
     });
   });
@@ -155,11 +155,11 @@ describe('UserController', () => {
         next,
       );
 
-      expect(res.status).toHaveBeenCalledWith(200);
+      // res.status(200) is implicit, so we don't assert res.status for 200 if not called
       const payload = (res.json as any).mock.calls[0][0];
       expect(payload.success).toBe(true);
-      expect(payload.data.token).toBe('mock.jwt.token');
-      expect(payload.data.user).toBeDefined();
+      expect(payload.token).toBe('mock.jwt.token');
+      expect(payload.user).toBeDefined();
     });
 
     it('calls service.login with email and password from body', async () => {

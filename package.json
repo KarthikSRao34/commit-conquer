@@ -4,7 +4,8 @@
 	"version": "0.0.0",
 	"workspaces": [
 		"apps/*",
-		"packages/*"
+		"packages/*",
+		"tests"
 	],
 	"scripts": {
 		"dev": "echo \"Run individual app dev scripts from their directories\"",

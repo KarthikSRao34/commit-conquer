@@ -3,9 +3,9 @@ interface Commit {
   id: string;
   message: string;
   repo: string;
-  authorId?: string;
-  points?: number;
-  createdAt?: Date;
+  authorId: string;
+  points: number;
+  createdAt: Date;
 }
 
 export const mockCommits: Commit[] = [

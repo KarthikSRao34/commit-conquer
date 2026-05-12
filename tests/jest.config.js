@@ -10,13 +10,7 @@ module.exports = {
   ],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: {
-        module: 'CommonJS',
-        moduleResolution: 'node',
-        esModuleInterop: true,
-        strict: false,
-        skipLibCheck: true,
-      },
+      tsconfig: '<rootDir>/tsconfig.json',
     }],
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],

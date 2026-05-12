@@ -1,8 +1,4 @@
-// Local test-safe hashString to avoid importing a missing module
-function hashString(s: string): string {
-  // simple deterministic placeholder used in fixtures
-  return `hashed:${s}`;
-}
+import { hashString } from '../../packages/server/src/utils/crypto';
 
 export type User = {
   id: string;
