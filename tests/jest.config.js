@@ -3,27 +3,37 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  rootDir: '.',
+
+  // Set rootDir to repo root so collectCoverageFrom can reach packages/server/src
+  // without relying on "../" globs (which ts-jest may not instrument correctly).
+  rootDir: '..',
+
   testMatch: [
-    '<rootDir>/unit/**/*.test.ts',
-    '<rootDir>/integration/**/*.test.ts',
+    '<rootDir>/tests/unit/**/*.test.ts',
+    '<rootDir>/tests/integration/**/*.test.ts',
   ],
+
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: '<rootDir>/tsconfig.json',
+      tsconfig: '<rootDir>/tests/tsconfig.json',
     }],
   },
+
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-  globalSetup: '<rootDir>/global-setup.ts',
-  globalTeardown: '<rootDir>/global-teardown.ts',
-  setupFilesAfterEnv: ['<rootDir>/setup.ts'],
+
+  globalSetup:        '<rootDir>/tests/global-setup.ts',
+  globalTeardown:     '<rootDir>/tests/global-teardown.ts',
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+
   testTimeout: 15000,
+
+  // Coverage — rootDir is repo root so these paths resolve correctly
   collectCoverage: true,
   collectCoverageFrom: [
-    '../packages/server/src/**/*.ts',
+    '<rootDir>/packages/server/src/**/*.ts',
     '!**/*.d.ts',
     '!**/node_modules/**',
   ],
-  coverageDirectory: '../eval_results/coverage',
-  coverageReporters: ['json-summary', 'text', 'lcov'],
+  coverageDirectory:  '<rootDir>/eval_results/coverage',
+  coverageReporters:  ['json-summary', 'text', 'lcov'],
 };

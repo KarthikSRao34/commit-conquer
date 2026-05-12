@@ -1,3 +1,4 @@
+# .github/workflows/evaluate.yml  (replaces the original)
 name: Evaluate PR
 
 on:
@@ -15,23 +16,15 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
 
-      - name: Install dependencies
-        run: |
-          rm -rf package-lock.json
-          npm install --legacy-peer-deps
+      - name: Install root dependencies
+        run: npm install --legacy-peer-deps
 
       - name: Install global tools
         run: npm install -g ts-node typescript
 
       - name: Install test dependencies
-        run: |
-         cd tests
-         npm install --legacy-peer-deps
-         cd ..
-
-      - name: Clean install test dependencies
         run: npm install --prefix tests --legacy-peer-deps
 
       - name: Create results directory
@@ -45,13 +38,10 @@ jobs:
           set +e
           cd tests
           npm test > ../eval_results/test_output.log 2>&1
-          TEST_EXIT_CODE=$?
-          if [ "$TEST_EXIT_CODE" -eq 0 ]; then
-            TESTS_PASSED=true
-          else
-            TESTS_PASSED=false
-          fi
-          printf '{"tests_passed":%s,"command":"npm test","exit_code":%s}\n' "$TESTS_PASSED" "$TEST_EXIT_CODE" > ../eval_results/test_result.json
+          EXIT=$?
+          PASSED=$([ "$EXIT" -eq 0 ] && echo true || echo false)
+          printf '{"tests_passed":%s,"command":"npm test","exit_code":%s}\n' "$PASSED" "$EXIT" \
+            > ../eval_results/test_result.json
           exit 0
 
       - name: Run lint
@@ -61,10 +51,11 @@ jobs:
       - name: Start backend
         continue-on-error: true
         run: |
-          PORT=4000 CORS_ORIGIN=http://localhost:3000 ADMIN_SECRET=admin_dev_secret NODE_ENV=test \
+          PORT=4000 CORS_ORIGIN=http://localhost:3000 \
+          ADMIN_SECRET=admin_dev_secret NODE_ENV=test \
           npm run start:server &
           echo $! > eval_results/backend.pid
-          sleep 8
+          sleep 10
 
       - name: Build frontend
         continue-on-error: true
@@ -74,18 +65,15 @@ jobs:
         continue-on-error: true
         run: |
           cd apps/storefront && npx vite preview --port 3000 --host &
-          echo $! > eval_results/frontend.pid
-          sleep 5
+          sleep 20
 
-      - name: Install k6
-        uses: grafana/setup-k6-action@v1
+      - uses: grafana/setup-k6-action@v1
 
       - name: Run load test
         continue-on-error: true
         run: bash eval/run_load_test.sh
 
       - name: Install Lighthouse CI
-        continue-on-error: true
         run: npm install -g @lhci/cli
 
       - name: Run Lighthouse
@@ -97,7 +85,6 @@ jobs:
         run: bash eval/run_bundle_check.sh
 
       - name: Compute score
-        continue-on-error: true
         run: node eval/compute_score.js
 
       - name: Save score artifact
