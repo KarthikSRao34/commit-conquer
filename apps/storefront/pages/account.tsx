@@ -1,10 +1,11 @@
 // apps/storefront/pages/account.tsx
 // Route: /account — login / register / dashboard
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 
 const API = "/api/store";
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
 export default function AccountPage() {
   const [mode, setMode] = useState<"login" | "register" | "dashboard">("login");
@@ -13,6 +14,7 @@ export default function AccountPage() {
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
   const [form, setForm]         = useState({ email: "", password: "", first_name: "", last_name: "" });
+  const googleBtnRef = useRef<HTMLDivElement>(null);
 
   // Check if already logged in
   if (token && !customer && mode !== "dashboard") {
@@ -25,6 +27,62 @@ export default function AccountPage() {
       })
       .catch(() => { localStorage.removeItem("cc_token"); setToken(null); });
   }
+
+  // Initialize Google Sign-In
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID || mode === "dashboard") return;
+
+    const initGIS = () => {
+      if ((window as any).google?.accounts?.id) {
+        (window as any).google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleResponse,
+        });
+        if (googleBtnRef.current) {
+          (window as any).google.accounts.id.renderButton(googleBtnRef.current, {
+            theme: "outline",
+            size: "large",
+            width: 320,
+            text: "signin_with",
+            shape: "rectangular",
+          });
+        }
+      }
+    };
+
+    if ((window as any).google?.accounts?.id) {
+      initGIS();
+    } else {
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = initGIS;
+      document.head.appendChild(script);
+      return () => { document.head.removeChild(script); };
+    }
+  }, [mode]);
+
+  const handleGoogleResponse = async (response: any) => {
+    setError(""); setLoading(true);
+    try {
+      const res = await fetch(`${API}/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message ?? "Google sign-in failed");
+      localStorage.setItem("cc_token", data.token);
+      setToken(data.token);
+      setCustomer(data.customer);
+      setMode("dashboard");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,6 +161,13 @@ export default function AccountPage() {
 
         {error && <div style={s.errorBox}>{error}</div>}
 
+        {GOOGLE_CLIENT_ID && (
+          <div>
+            <div ref={googleBtnRef} style={{ display: "flex", justifyContent: "center" }} />
+            <div style={s.divider}>or continue with email</div>
+          </div>
+        )}
+
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {mode === "register" && (
             <div style={s.row}>
@@ -135,6 +200,7 @@ const s: Record<string, any> = {
   errorBox:   { background: "rgba(255,92,92,0.12)", border: "1px solid #ff5c5c44", borderRadius: 8, padding: "12px 16px", color: "#ff5c5c", fontSize: 14, marginBottom: 16 },
   row:        { display: "flex", gap: 12 },
   input:      { flex: 1, width: "100%", padding: "12px 16px", background: "#1c1c21", border: "1px solid #2a2a31", borderRadius: 10, color: "#e8e8f0", fontSize: 15, outline: "none" },
+  divider:   { display: "flex", alignItems: "center", gap: 12, margin: "16px 0", color: "#555", fontSize: 12, textTransform: "uppercase", letterSpacing: 1 },
   submitBtn:  { padding: "14px", background: "#7c6aff", color: "#fff", border: "none", borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: "pointer" },
   switchBtn:  { marginTop: 20, background: "none", border: "none", color: "#7c6aff", cursor: "pointer", fontSize: 14, padding: 0, width: "100%", textAlign: "left" },
   infoGrid:   { display: "flex", flexDirection: "column", gap: 0, border: "1px solid #2a2a31", borderRadius: 12, overflow: "hidden" },

@@ -2,36 +2,51 @@ name: Evaluate PR
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
 
 permissions:
-  pull-requests: write
   contents: read
-  issues: write
 
 jobs:
   evaluate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "20"
 
       - name: Install dependencies
         run: |
-          npm cache clean --force
-          rm -rf node_modules package-lock.json
+          rm -rf package-lock.json
           npm install --legacy-peer-deps
 
       - name: Install global tools
         run: npm install -g ts-node typescript
 
+      - name: Install test dependencies
+        run: npm ci --prefix tests --legacy-peer-deps
+
       - name: Create results directory
-        run: mkdir -p eval_results
+        run: |
+          mkdir -p eval_results
+          echo "${{ github.event.pull_request.number }}" > eval_results/pr_number.txt
+
+      - name: Run tests
+        continue-on-error: true
+        run: |
+          set +e
+          cd tests
+          npm test > ../eval_results/test_output.log 2>&1
+          TEST_EXIT_CODE=$?
+          if [ "$TEST_EXIT_CODE" -eq 0 ]; then
+            TESTS_PASSED=true
+          else
+            TESTS_PASSED=false
+          fi
+          printf '{"tests_passed":%s,"command":"npm test","exit_code":%s}\n' "$TESTS_PASSED" "$TEST_EXIT_CODE" > ../eval_results/test_result.json
+          exit 0
 
       - name: Run lint
         continue-on-error: true
@@ -76,31 +91,12 @@ jobs:
         run: bash eval/run_bundle_check.sh
 
       - name: Compute score
+        continue-on-error: true
         run: node eval/compute_score.js
-        continue-on-error: true
 
-      - name: Debug results
-        run: |
-          echo "=== eval_results contents ==="
-          ls -la eval_results/ || echo "eval_results dir missing"
-          echo "=== score.json ==="
-          cat eval_results/score.json || echo "score.json missing"
-        continue-on-error: true
-      
-      - name: Debug secret
-        run: |
-          if [ -z "$BOT_TOKEN" ]; then
-          echo "BOT_TOKEN is EMPTY or NOT SET"
-          else
-          echo "BOT_TOKEN is SET"
-          fi
-        env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-
-      - name: Post PR comment
-        env:
-          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
-          PR_CREATED_AT: ${{ github.event.pull_request.created_at }}
-        run: node eval/post_comment.js
+      - name: Save score artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: score-run-${{ github.run_id }}
+          path: eval_results/
+          retention-days: 1

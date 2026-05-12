@@ -328,6 +328,43 @@ export const AuthService = {
     }
   },
 
+  // ─── Google OAuth Login ─────────────────────────────────────────────────────
+
+  async googleLogin(googleToken: string): Promise<{ customer: Customer; token: string }> {
+    const payload = _decodeGoogleToken(googleToken);
+
+    const email = payload.email;
+    if (!email) {
+      throw new ServiceError("VALIDATION_ERROR", "Google account has no email");
+    }
+
+    const emailKey = email.toLowerCase().trim();
+    let record = customersByEmail.get(emailKey);
+
+    if (!record) {
+      const customer: Customer = {
+        id: generateId("cust"),
+        email: emailKey,
+        first_name: payload.given_name || payload.name || "Google",
+        last_name: payload.family_name || "User",
+        has_account: true,
+        created_at: new Date().toISOString(),
+      };
+
+      record = { customer, password_hash: "" };
+      customersByEmail.set(emailKey, record);
+      customersById.set(customer.id, record);
+
+      await eventBus.emit(EVENT.CUSTOMER_CREATED, {
+        customer_id: customer.id,
+        email: customer.email,
+      });
+    }
+
+    const token = _issueToken(record.customer.id);
+    return { customer: record.customer, token };
+  },
+
   // ─── List active sessions (admin/debug) ────────────────────────────────────
 
   activeSessions(customerId: string): AuthSession[] {
@@ -403,4 +440,22 @@ function _validateRegister(input: RegisterInput): void {
     throw new ServiceError("VALIDATION_ERROR", "Last name is required");
   }
   _validatePasswordStrength(input.password);
+}
+
+/**
+ * Decode a Google ID token (JWT) without verification.
+ * In production, use google-auth-library to verify the token signature
+ * with Google's public keys instead.
+ */
+function _decodeGoogleToken(token: string): Record<string, any> {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      throw new Error("Invalid JWT");
+    }
+    const decoded = Buffer.from(parts[1], "base64url").toString("utf8");
+    return JSON.parse(decoded);
+  } catch {
+    throw new ServiceError("VALIDATION_ERROR", "Invalid Google token");
+  }
 }

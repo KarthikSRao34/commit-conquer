@@ -55,6 +55,11 @@ try {
     []
   );
 
+  const testResult = readJsonFile(
+    path.join('eval_results', 'test_result.json'),
+    { tests_passed: false, command: 'npm test' }
+  );
+
   const coverageData = readJsonFile(
     path.join('eval_results', 'coverage', 'coverage-summary.json'),
     {}
@@ -77,7 +82,7 @@ try {
   const score = {
     status: 'ACCEPTED',
     reason: null,
-    tests_passed: true,
+    tests_passed: Boolean(testResult.tests_passed),
     issue_count: lintResult.issue_count || 0,
     error_count: lintResult.error_count || 0,
     warning_count: lintResult.warning_count || 0,
@@ -103,7 +108,7 @@ try {
   const result = {
     status: 'ACCEPTED',
     reason: null,
-    tests_passed: true,
+    tests_passed: false,
     issue_count: 0,
     error_count: 0,
     warning_count: 0,
