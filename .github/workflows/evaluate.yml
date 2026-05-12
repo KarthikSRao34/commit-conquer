@@ -26,6 +26,12 @@ jobs:
         run: npm install -g ts-node typescript
 
       - name: Install test dependencies
+        run: |
+         cd tests
+         npm install --legacy-peer-deps
+         cd ..
+
+      - name: Clean install test dependencies
         run: npm ci --prefix tests --legacy-peer-deps
 
       - name: Create results directory
