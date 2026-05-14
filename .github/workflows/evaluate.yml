@@ -1,7 +1,3 @@
-# .github/workflows/evaluate.yml
-# Single workflow — evaluates PR and posts score to backend + GitHub comment
-# Replaces BOTH evaluate.yml and comment-pr-evaluation.yml
-
 name: Evaluate PR
 
 on:
@@ -16,10 +12,8 @@ permissions:
 jobs:
   evaluate:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -95,14 +89,15 @@ jobs:
         continue-on-error: true
         run: node eval/compute_score.js
 
-      - name: Post score to backend and comment on PR
+      - name: Post score + AI review
         env:
           GITHUB_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
           REPO:            ${{ github.repository }}
           PR_NUMBER:       ${{ github.event.pull_request.number }}
           GITHUB_USERNAME: ${{ github.event.pull_request.user.login }}
-          PR_BODY:         ${{ github.event.pull_request.body }}
           PR_TITLE:        ${{ github.event.pull_request.title }}
+          PR_BODY:         ${{ github.event.pull_request.body }}
           PR_CREATED_AT:   ${{ github.event.pull_request.created_at }}
           BACKEND_URL:     ${{ secrets.BACKEND_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: node eval/post_comment.js
