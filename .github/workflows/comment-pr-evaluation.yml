@@ -38,9 +38,11 @@ jobs:
           echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Post PR comment
-        if: ${{ steps.pr.outputs.pr_number != '' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
-          REPO: ${{ github.repository }}
-        run: node eval/post_comment.js
+      if: ${{ steps.pr.outputs.pr_number != '' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+        REPO: ${{ github.repository }}
+        BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        GITHUB_USERNAME: ${{ github.event.workflow_run.head_repository.owner.login }}
+      run: node eval/post_comment.js
