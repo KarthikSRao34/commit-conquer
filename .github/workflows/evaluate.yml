@@ -1,4 +1,7 @@
-# .github/workflows/evaluate.yml  (replaces the original)
+# .github/workflows/evaluate.yml
+# Single workflow — evaluates PR and posts score to backend + GitHub comment
+# Replaces BOTH evaluate.yml and comment-pr-evaluation.yml
+
 name: Evaluate PR
 
 on:
@@ -7,10 +10,13 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
   evaluate:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -18,26 +24,25 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install root dependencies
+      - name: Install dependencies
         run: npm install --legacy-peer-deps
 
       - name: Install global tools
+        continue-on-error: true
         run: npm install -g ts-node typescript
 
       - name: Install test dependencies
+        continue-on-error: true
         run: npm install --prefix tests --legacy-peer-deps
 
       - name: Create results directory
-        run: |
-          mkdir -p eval_results
-          echo "${{ github.event.pull_request.number }}" > eval_results/pr_number.txt
+        run: mkdir -p eval_results
 
       - name: Run tests
         continue-on-error: true
         run: |
           set +e
-          cd tests
-          npm test > ../eval_results/test_output.log 2>&1
+          cd tests && npm test > ../eval_results/test_output.log 2>&1
           EXIT=$?
           PASSED=$([ "$EXIT" -eq 0 ] && echo true || echo false)
           printf '{"tests_passed":%s,"command":"npm test","exit_code":%s}\n' "$PASSED" "$EXIT" \
@@ -54,7 +59,6 @@ jobs:
           PORT=4000 CORS_ORIGIN=http://localhost:3000 \
           ADMIN_SECRET=admin_dev_secret NODE_ENV=test \
           npm run start:server &
-          echo $! > eval_results/backend.pid
           sleep 10
 
       - name: Build frontend
@@ -65,15 +69,18 @@ jobs:
         continue-on-error: true
         run: |
           cd apps/storefront && npx vite preview --port 3000 --host &
-          sleep 20
+          sleep 15
 
-      - uses: grafana/setup-k6-action@v1
+      - name: Install k6
+        continue-on-error: true
+        uses: grafana/setup-k6-action@v1
 
       - name: Run load test
         continue-on-error: true
         run: bash eval/run_load_test.sh
 
       - name: Install Lighthouse CI
+        continue-on-error: true
         run: npm install -g @lhci/cli
 
       - name: Run Lighthouse
@@ -85,11 +92,17 @@ jobs:
         run: bash eval/run_bundle_check.sh
 
       - name: Compute score
+        continue-on-error: true
         run: node eval/compute_score.js
 
-      - name: Save score artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: score-run-${{ github.run_id }}
-          path: eval_results/
-          retention-days: 1
+      - name: Post score to backend and comment on PR
+        env:
+          GITHUB_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
+          REPO:            ${{ github.repository }}
+          PR_NUMBER:       ${{ github.event.pull_request.number }}
+          GITHUB_USERNAME: ${{ github.event.pull_request.user.login }}
+          PR_BODY:         ${{ github.event.pull_request.body }}
+          PR_TITLE:        ${{ github.event.pull_request.title }}
+          PR_CREATED_AT:   ${{ github.event.pull_request.created_at }}
+          BACKEND_URL:     ${{ secrets.BACKEND_URL }}
+        run: node eval/post_comment.js
