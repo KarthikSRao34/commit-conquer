@@ -1,4 +1,5 @@
 eval/                    @Commit-Conquer/organizers
+tests/                   @Commit-Conquer/organizers
 .github/workflows/       @Commit-Conquer/organizers
 .github/CODEOWNERS       @Commit-Conquer/organizers
 lighthouserc.json        @Commit-Conquer/organizers
