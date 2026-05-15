@@ -38,6 +38,7 @@ export interface CartItem {
 }
 
 export interface Cart {
+  customer_id: string;
   id: string;
   items: CartItem[];
   subtotal: number;

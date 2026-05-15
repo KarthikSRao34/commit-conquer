@@ -29,35 +29,35 @@ export interface PlaceOrderInput {
 
 export interface RefundInput {
   order_id: string;
-  amount: number;        
+  amount: number;
   reason?: string;
 }
 
 
 
 const orders = new Map<string, Order>();
-
+const customerOrderIndex = new Map<string, Set<string>>();
 
 
 function _seedOrders() {
   const NAMES = [
-    { first: "Ethan",  last: "Cole",   email: "ethan@example.com"  },
-    { first: "Maya",   last: "Patel",  email: "maya@example.com"   },
-    { first: "Lucas",  last: "Kim",    email: "lucas@example.com"  },
-    { first: "Zoe",    last: "Turner", email: "zoe@example.com"    },
-    { first: "Aiden",  last: "Brooks", email: "aiden@example.com"  },
-    { first: "Sara",   last: "Nolan",  email: "sara@example.com"   },
+    { first: "Ethan", last: "Cole", email: "ethan@example.com" },
+    { first: "Maya", last: "Patel", email: "maya@example.com" },
+    { first: "Lucas", last: "Kim", email: "lucas@example.com" },
+    { first: "Zoe", last: "Turner", email: "zoe@example.com" },
+    { first: "Aiden", last: "Brooks", email: "aiden@example.com" },
+    { first: "Sara", last: "Nolan", email: "sara@example.com" },
   ];
 
   const ITEM_SETS: Array<Array<{ title: string; variant_title: string; price: number; qty: number }>> = [
-    [{ title: "Obsidian Crew Neck", variant_title: "M / Black",  price: 7900,  qty: 1 }],
-    [{ title: "Slate Cargo Pant",   variant_title: "32x30 / Slate", price: 11900, qty: 1 },
-     { title: "Onyx Hoodie",        variant_title: "L / Onyx",   price: 9400,  qty: 1 }],
-    [{ title: "Granite Bomber",     variant_title: "M / Granite", price: 16800, qty: 1 }],
-    [{ title: "Carbon Jogger",      variant_title: "M / Carbon",  price: 8900,  qty: 2 }],
-    [{ title: "Ash Trench Coat",    variant_title: "S / Ash",     price: 22900, qty: 1 }],
-    [{ title: "Basalt Windbreaker", variant_title: "L / Basalt",  price: 13400, qty: 1 },
-     { title: "Flint Overshirt",    variant_title: "M / Flint",   price: 11400, qty: 1 }],
+    [{ title: "Obsidian Crew Neck", variant_title: "M / Black", price: 7900, qty: 1 }],
+    [{ title: "Slate Cargo Pant", variant_title: "32x30 / Slate", price: 11900, qty: 1 },
+    { title: "Onyx Hoodie", variant_title: "L / Onyx", price: 9400, qty: 1 }],
+    [{ title: "Granite Bomber", variant_title: "M / Granite", price: 16800, qty: 1 }],
+    [{ title: "Carbon Jogger", variant_title: "M / Carbon", price: 8900, qty: 2 }],
+    [{ title: "Ash Trench Coat", variant_title: "S / Ash", price: 22900, qty: 1 }],
+    [{ title: "Basalt Windbreaker", variant_title: "L / Basalt", price: 13400, qty: 1 },
+    { title: "Flint Overshirt", variant_title: "M / Flint", price: 11400, qty: 1 }],
   ];
 
   const STATUSES: OrderStatus[] = [
@@ -66,108 +66,140 @@ function _seedOrders() {
 
   const ADDRESSES = [
     { city: "San Francisco", state: "CA", postal_code: "94105" },
-    { city: "New York",      state: "NY", postal_code: "10001" },
-    { city: "Austin",        state: "TX", postal_code: "73301" },
+    { city: "New York", state: "NY", postal_code: "10001" },
+    { city: "Austin", state: "TX", postal_code: "73301" },
   ];
 
   Array.from({ length: 24 }, (_, i) => {
-    const person  = NAMES[i % NAMES.length];
+    const person = NAMES[i % NAMES.length];
     const rawItems = ITEM_SETS[i % ITEM_SETS.length];
-    const addr    = ADDRESSES[i % ADDRESSES.length];
-    const status  = STATUSES[i % STATUSES.length];
+    const addr = ADDRESSES[i % ADDRESSES.length];
+    const status = STATUSES[i % STATUSES.length];
 
     const items: OrderItem[] = rawItems.map((it, j) => ({
-      id:            `item_seed_${i}_${j}`,
-      product_id:    `prod_00${(j + 1)}`,
-      variant_id:    `var_seed_${i}_${j}`,
-      title:         it.title,
+      id: `item_seed_${i}_${j}`,
+      product_id: `prod_00${(j + 1)}`,
+      variant_id: `var_seed_${i}_${j}`,
+      title: it.title,
       variant_title: it.variant_title,
-      price:         it.price,
-      quantity:      it.qty,
-      subtotal:      it.price * it.qty,
+      price: it.price,
+      quantity: it.qty,
+      subtotal: it.price * it.qty,
     }));
 
-    const subtotal       = items.reduce((s, it) => s + it.subtotal, 0);
+    const subtotal = items.reduce((s, it) => s + it.subtotal, 0);
     const shipping_total = subtotal >= 10000 ? 0 : 599;
-    const tax_total      = Math.round(subtotal * 0.08875);
-    const total          = subtotal + shipping_total + tax_total;
+    const tax_total = Math.round(subtotal * 0.08875);
+    const total = subtotal + shipping_total + tax_total;
 
     const createdAt = new Date();
     createdAt.setDate(createdAt.getDate() - i * 2);
 
     const order: Order = {
-      id:                  `ORD-${String(1000 + i).padStart(4, "0")}`,
+      customer_id: `cust_${(i % 6) + 1}`,
+      id: `ORD-${String(1000 + i).padStart(4, "0")}`,
       status,
-      email:               person.email,
+      email: person.email,
       items,
       subtotal,
       shipping_total,
       tax_total,
-      discount_amount:     0,
+      discount_amount: 0,
       total,
       shipping_address: {
-        first_name:   person.first,
-        last_name:    person.last,
-        address_1:    `${100 + i * 7} Maple Ave`,
-        city:         addr.city,
-        state:        addr.state,
-        postal_code:  addr.postal_code,
+        first_name: person.first,
+        last_name: person.last,
+        address_1: `${100 + i * 7} Maple Ave`,
+        city: addr.city,
+        state: addr.state,
+        postal_code: addr.postal_code,
         country_code: "US",
       },
       billing_address: {
-        first_name:   person.first,
-        last_name:    person.last,
-        address_1:    `${100 + i * 7} Maple Ave`,
-        city:         addr.city,
-        state:        addr.state,
-        postal_code:  addr.postal_code,
+        first_name: person.first,
+        last_name: person.last,
+        address_1: `${100 + i * 7} Maple Ave`,
+        city: addr.city,
+        state: addr.state,
+        postal_code: addr.postal_code,
         country_code: "US",
       },
-      payment_status:      status === "refunded" ? "refunded" : "captured",
+      payment_status: status === "refunded" ? "refunded" : "captured",
       fulfillment_status:
         status === "delivered" ? "delivered"
-        : status === "shipped" ? "shipped"
-        : status === "cancelled" ? "not_fulfilled"
-        : "not_fulfilled",
+          : status === "shipped" ? "shipped"
+            : status === "cancelled" ? "not_fulfilled"
+              : "not_fulfilled",
       created_at: createdAt.toISOString(),
       updated_at: createdAt.toISOString(),
     };
 
     orders.set(order.id, order);
+    addToCustomerIndex(order);
   });
 }
 
+
 _seedOrders();
 
+function addToCustomerIndex(order: Order) {
+  if (!order.customer_id) return;
 
+  if (!customerOrderIndex.has(order.customer_id)) {
+    customerOrderIndex.set(order.customer_id, new Set());
+  }
+
+  customerOrderIndex.get(order.customer_id)!.add(order.id);
+}
+
+function removeFromCustomerIndex(order: Order) {
+  if (!order.customer_id) return;
+
+  const bucket = customerOrderIndex.get(order.customer_id);
+  if (!bucket) return;
+
+  bucket.delete(order.id);
+
+  if (bucket.size === 0) {
+    customerOrderIndex.delete(order.customer_id);
+  }
+}
 
 export const OrderService = {
 
-  
+
 
   list(input: ListOrdersInput = {}): PaginatedResponse<Order> {
     const {
       offset = 0,
-      limit  = 20,
+      limit = 20,
       status = "all",
       search,
-      sort   = "newest",
+      sort = "newest",
       customer_id,
     } = input;
 
     let result = [...orders.values()];
 
-    
+
     if (status !== "all") {
       result = result.filter((o) => o.status === status);
     }
 
-    
+
     if (customer_id) {
-      result = result.filter((o) => o.customer_id === customer_id);
+      const indexedOrderIds = customerOrderIndex.get(customer_id);
+
+      if (!indexedOrderIds) {
+        return paginate([], offset, limit);
+      }
+
+      result = [...indexedOrderIds]
+        .map((id) => orders.get(id))
+        .filter(Boolean) as Order[];
     }
 
-    
+
     if (search?.trim()) {
       const q = search.trim().toLowerCase();
       result = result.filter(
@@ -180,7 +212,7 @@ export const OrderService = {
       );
     }
 
-    
+
     result = result.sort((a, b) => {
       switch (sort) {
         case "oldest":
@@ -198,7 +230,7 @@ export const OrderService = {
     return paginate(result, offset, limit);
   },
 
-  
+
 
   getById(id: string): Order {
     const order = orders.get(id);
@@ -208,7 +240,7 @@ export const OrderService = {
 
 
   async place(input: PlaceOrderInput): Promise<Order> {
-    
+
     const tempCart = CartService.get(input.cart_id);
     if (tempCart.discount_code && tempCart.email) {
       const hasUsed = [...orders.values()].some(
@@ -224,42 +256,44 @@ export const OrderService = {
 
     const { cart, order_id } = await CartService.complete(input.cart_id);
 
-    
+
     const items: OrderItem[] = cart.items.map((ci) => ({
-      id:            generateId("oi"),
-      product_id:    ci.product_id,
-      variant_id:    ci.variant_id,
-      title:         ci.title,
+      id: generateId("oi"),
+      product_id: ci.product_id,
+      variant_id: ci.variant_id,
+      title: ci.title,
       variant_title: ci.variant_title,
-      thumbnail:     ci.thumbnail,
-      price:         ci.price,
-      quantity:      ci.quantity,
-      subtotal:      ci.price * ci.quantity,
+      thumbnail: ci.thumbnail,
+      price: ci.price,
+      quantity: ci.quantity,
+      subtotal: ci.price * ci.quantity,
     }));
 
-    
+
     const order: Order = {
-      id:                  order_id,
-      status:              "pending",
-      email:               cart.email!,
+      customer_id: cart.customer_id ?? cart.email!,
+      id: order_id,
+      status: "pending",
+      email: cart.email!,
       items,
-      subtotal:            cart.subtotal,
-      shipping_total:      cart.shipping_total,
-      tax_total:           cart.tax_total,
-      discount_amount:     cart.discount_amount,
-      discount_code:       cart.discount_code,
-      total:               cart.total,
-      shipping_address:    cart.shipping_address!,
-      billing_address:     cart.billing_address ?? cart.shipping_address!,
-      payment_status:      "awaiting",
-      fulfillment_status:  "not_fulfilled",
-      created_at:          new Date().toISOString(),
-      updated_at:          new Date().toISOString(),
+      subtotal: cart.subtotal,
+      shipping_total: cart.shipping_total,
+      tax_total: cart.tax_total,
+      discount_amount: cart.discount_amount,
+      discount_code: cart.discount_code,
+      total: cart.total,
+      shipping_address: cart.shipping_address!,
+      billing_address: cart.billing_address ?? cart.shipping_address!,
+      payment_status: "awaiting",
+      fulfillment_status: "not_fulfilled",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
     orders.set(order.id, order);
+    addToCustomerIndex(order);
 
-    
+
     for (const item of cart.items) {
       try {
         await ProductService.adjustInventory(
@@ -275,17 +309,17 @@ export const OrderService = {
       }
     }
 
-    
+
     await eventBus.emit(EVENT.ORDER_PLACED, {
-      order_id:       order.id,
+      order_id: order.id,
       customer_email: order.email,
-      total:          order.total,
+      total: order.total,
     });
 
     return order;
   },
 
-  
+
 
   async fulfill(orderId: string): Promise<Order> {
     const order = OrderService.getById(orderId);
@@ -297,12 +331,12 @@ export const OrderService = {
       );
     }
 
-    await sleep(300); 
+    await sleep(300);
 
     const updated = _update(orderId, {
-      status:             "processing",
+      status: "processing",
       fulfillment_status: "fulfilled",
-      payment_status:     "captured",
+      payment_status: "captured",
     });
 
     await eventBus.emit(EVENT.ORDER_FULFILLED, { order_id: orderId });
@@ -310,7 +344,7 @@ export const OrderService = {
     return updated;
   },
 
-  
+
 
   async ship(orderId: string, tracking_number?: string): Promise<Order> {
     const order = OrderService.getById(orderId);
@@ -325,7 +359,7 @@ export const OrderService = {
     await sleep(200);
 
     const updated = _update(orderId, {
-      status:             "shipped",
+      status: "shipped",
       fulfillment_status: "shipped",
     });
 
@@ -334,7 +368,7 @@ export const OrderService = {
     return updated;
   },
 
-  
+
 
   async deliver(orderId: string): Promise<Order> {
     const order = OrderService.getById(orderId);
@@ -347,7 +381,7 @@ export const OrderService = {
     }
 
     const updated = _update(orderId, {
-      status:             "delivered",
+      status: "delivered",
       fulfillment_status: "delivered",
     });
 
@@ -356,7 +390,7 @@ export const OrderService = {
     return updated;
   },
 
-  
+
 
   async cancel(orderId: string, reason?: string): Promise<Order> {
     const order = OrderService.getById(orderId);
@@ -384,7 +418,7 @@ export const OrderService = {
     }
 
     const updated = _update(orderId, {
-      status:            "cancelled",
+      status: "cancelled",
       fulfillment_status: "not_fulfilled",
     });
 
@@ -393,7 +427,7 @@ export const OrderService = {
     return updated;
   },
 
-  
+
 
   async refund(input: RefundInput): Promise<Order> {
     const { order_id, amount, reason = "customer_request" } = input;
@@ -428,7 +462,7 @@ export const OrderService = {
     const isFullRefund = amount === order.total;
 
     const updated = _update(order_id, {
-      status:         isFullRefund ? "refunded" : order.status,
+      status: isFullRefund ? "refunded" : order.status,
       payment_status: isFullRefund ? "refunded" : "partially_refunded",
     });
 
@@ -437,7 +471,7 @@ export const OrderService = {
     return updated;
   },
 
-  
+
 
   stats(): {
     total: number;
@@ -455,13 +489,13 @@ export const OrderService = {
       .reduce((sum, o) => sum + o.total, 0);
 
     return {
-      total:      all.length,
-      pending:    all.filter((o) => o.status === "pending").length,
+      total: all.length,
+      pending: all.filter((o) => o.status === "pending").length,
       processing: all.filter((o) => o.status === "processing").length,
-      shipped:    all.filter((o) => o.status === "shipped").length,
-      delivered:  all.filter((o) => o.status === "delivered").length,
-      cancelled:  all.filter((o) => o.status === "cancelled").length,
-      refunded:   all.filter((o) => o.status === "refunded").length,
+      shipped: all.filter((o) => o.status === "shipped").length,
+      delivered: all.filter((o) => o.status === "delivered").length,
+      cancelled: all.filter((o) => o.status === "cancelled").length,
+      refunded: all.filter((o) => o.status === "refunded").length,
       revenue,
     };
   },
