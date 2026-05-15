@@ -159,7 +159,6 @@ export const ProductService = {
       product_id: id,
       changes:    changes as Record<string, unknown>,
     });
-
     return updated;
   },
 
@@ -319,8 +318,18 @@ function _validateCreate(input: CreateProductInput): void {
     if (!v.sku?.trim()) {
       throw new ServiceError("VALIDATION_ERROR", `Variant SKU is required`);
     }
-    if (typeof v.price !== "number" || v.price < 0) {
-      throw new ServiceError("VALIDATION_ERROR", `Variant price must be a non-negative number`);
+   
+   const p = v.price;
+    if (
+      typeof p !== "number" || 
+      !Number.isFinite(p) ||    
+      !Number.isInteger(p) ||   
+      p < 0                     
+    ) {
+      throw new ServiceError(
+        "VALIDATION_ERROR", 
+        `Variant price must be a non-negative integer (cents). Received: ${p}`
+      );
     }
   }
 }
