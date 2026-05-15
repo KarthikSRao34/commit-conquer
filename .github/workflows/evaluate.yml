@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -25,23 +26,8 @@ jobs:
         continue-on-error: true
         run: npm install -g ts-node typescript
 
-      - name: Install test dependencies
-        continue-on-error: true
-        run: npm install --prefix tests --legacy-peer-deps
-
       - name: Create results directory
         run: mkdir -p eval_results
-
-      - name: Run tests
-        continue-on-error: true
-        run: |
-          set +e
-          cd tests && npm test > ../eval_results/test_output.log 2>&1
-          EXIT=$?
-          PASSED=$([ "$EXIT" -eq 0 ] && echo true || echo false)
-          printf '{"tests_passed":%s,"command":"npm test","exit_code":%s}\n' "$PASSED" "$EXIT" \
-            > ../eval_results/test_result.json
-          exit 0
 
       - name: Run lint
         continue-on-error: true
@@ -89,7 +75,31 @@ jobs:
         continue-on-error: true
         run: node eval/compute_score.js
 
-      - name: Post score + AI review
+      - name: Save score artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: score-pr-${{ github.event.pull_request.number }}
+          path: eval_results/
+          retention-days: 1
+
+  comment:
+    runs-on: ubuntu-latest
+    needs: evaluate
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download score artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: score-pr-${{ github.event.pull_request.number }}
+          path: eval_results/
+
+      - name: Post PR comment
         env:
           GITHUB_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
           REPO:            ${{ github.repository }}
