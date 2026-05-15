@@ -1,4 +1,4 @@
-// Minimal discounts service stub
+
 export const DiscountService = {
   list: async () => [] as Array<{ id: string; code: string }>,
   create: async (input: any) => ({ id: `d_${Date.now()}`, ...input }),

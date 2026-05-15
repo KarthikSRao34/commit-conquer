@@ -1,11 +1,8 @@
-// packages/modules/products/product.model.ts
 
 import { type Product, type ProductVariant } from "../../core/types";
 import { generateId, toHandle } from "../../core/utils";
 
-// ─── Seed Data ────────────────────────────────────────────────────────────────
-// In-memory store — replace with Postgres/Prisma queries when ready.
-// All prices are in cents.
+
 
 const SEED_PRODUCTS: Product[] = [
   {
@@ -210,13 +207,12 @@ const SEED_PRODUCTS: Product[] = [
   },
 ];
 
-// ─── In-Memory Store ──────────────────────────────────────────────────────────
-// Using a Map for O(1) lookups by id and O(1) lookups by handle.
+
 
 const byId   = new Map<string, Product>(SEED_PRODUCTS.map((p) => [p.id, p]));
 const byHandle = new Map<string, Product>(SEED_PRODUCTS.map((p) => [p.handle, p]));
 
-// ─── Model API ────────────────────────────────────────────────────────────────
+
 
 export const ProductModel = {
 
@@ -267,7 +263,7 @@ export const ProductModel = {
     const existing = byId.get(id);
     if (!existing) return undefined;
 
-    // If title changed, regenerate handle
+    
     const newHandle =
       changes.title && changes.title !== existing.title
         ? toHandle(changes.title)
@@ -276,12 +272,11 @@ export const ProductModel = {
     const updated: Product = {
       ...existing,
       ...changes,
-      id,                               // id never changes
+      id,                              
       handle: newHandle,
       updated_at: new Date().toISOString(),
     };
 
-    // Keep handle map in sync
     if (newHandle !== existing.handle) {
       byHandle.delete(existing.handle);
       byHandle.set(newHandle, updated);
@@ -299,7 +294,7 @@ export const ProductModel = {
     return true;
   },
 
-  // ─── Variant helpers ────────────────────────────────────────────────────────
+  
 
   findVariant(productId: string, variantId: string): ProductVariant | undefined {
     return byId.get(productId)?.variants.find((v) => v.id === variantId);
@@ -308,7 +303,7 @@ export const ProductModel = {
   updateVariantInventory(
     productId: string,
     variantId: string,
-    delta: number,          // positive = restock, negative = sold
+    delta: number,          
   ): ProductVariant | undefined {
     const product = byId.get(productId);
     if (!product) return undefined;
@@ -324,7 +319,7 @@ export const ProductModel = {
     return variant;
   },
 
-  // ─── Stats (used by admin dashboard) ────────────────────────────────────────
+  
 
   stats() {
     const all = [...byId.values()];
@@ -339,7 +334,7 @@ export const ProductModel = {
   },
 };
 
-// ─── Private helpers ──────────────────────────────────────────────────────────
+
 
 function _variant(
   productId: string,

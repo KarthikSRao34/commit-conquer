@@ -1,5 +1,4 @@
-// apps/storefront/pages/admin/AdminLayout.tsx
-// Wraps all /admin/* routes with sidebar navigation
+
 
 import { NavLink, Outlet, Link } from "react-router-dom";
 
@@ -42,7 +41,6 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      {/* Content */}
       <main style={s.main}>
         <Outlet />
       </main>

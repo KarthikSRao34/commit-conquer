@@ -1,18 +1,18 @@
-// packages/modules/payments/payment.service.ts
+
 
 import { type PaymentSession, type Refund } from "../../core/types";
 import { generateId, formatMoney, sleep } from "../../core/utils";
 import { eventBus, EVENT } from "../../core/event-bus";
 import { ServiceError } from "../products/product.service";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+
 
 export type PaymentProvider = "stripe" | "manual";
 
 export interface InitiatePaymentInput {
   order_id: string;
-  amount: number;           // cents
-  currency?: string;        // default "usd"
+  amount: number;           
+  currency?: string;        
   provider?: PaymentProvider;
   customer_email?: string;
 }
@@ -25,26 +25,23 @@ export interface CapturePaymentInput {
 export interface RefundPaymentInput {
   session_id: string;
   order_id: string;
-  amount: number;           // cents — partial or full
+  amount: number;           
   reason?: string;
 }
 
-// ─── In-Memory Stores ─────────────────────────────────────────────────────────
+
 
 const sessions = new Map<string, PaymentSession>();
 const refunds  = new Map<string, Refund>();
 
-// Index: order_id → session_id (one active session per order)
+
 const orderSessionIndex = new Map<string, string>();
 
-// ─── Payment Service ──────────────────────────────────────────────────────────
+
 
 export const PaymentService = {
 
-  // ─── Initiate ──────────────────────────────────────────────────────────────
-  // Creates a payment session for an order.
-  // For Stripe: returns a client_secret the frontend uses with Stripe.js.
-  // For manual: immediately marks as authorized.
+  
 
   async initiate(input: InitiatePaymentInput): Promise<PaymentSession> {
     const {
@@ -59,7 +56,7 @@ export const PaymentService = {
       throw new ServiceError("INVALID_AMOUNT", "Payment amount must be greater than zero");
     }
 
-    // Cancel any existing session for this order before creating a new one
+    
     const existingSessionId = orderSessionIndex.get(order_id);
     if (existingSessionId) {
       const existing = sessions.get(existingSessionId);
@@ -69,7 +66,7 @@ export const PaymentService = {
       }
     }
 
-    await sleep(200); // simulate provider API call
+    await sleep(200);
 
     const session: PaymentSession = {
       id:          generateId("ps"),
@@ -79,13 +76,9 @@ export const PaymentService = {
       data:        {},
     };
 
-    // ── Provider-specific setup ──
+    
     if (provider === "stripe") {
-      // In production: call Stripe API to create a PaymentIntent
-      // const intent = await stripe.paymentIntents.create({ amount, currency, receipt_email: customer_email });
-      // session.data = { client_secret: intent.client_secret, payment_intent_id: intent.id };
-
-      // Hackathon mock — fake client_secret
+      
       session.data = {
         client_secret:      `pi_mock_${session.id}_secret_${Math.random().toString(36).slice(2)}`,
         payment_intent_id:  `pi_mock_${session.id}`,
@@ -95,7 +88,7 @@ export const PaymentService = {
     }
 
     if (provider === "manual") {
-      // Manual payments are pre-authorized immediately
+      
       session.status = "authorized";
       session.data   = { note: "Manual payment — no gateway" };
     }
@@ -112,7 +105,7 @@ export const PaymentService = {
     return session;
   },
 
-  // ─── Get Session ───────────────────────────────────────────────────────────
+  
 
   getSession(sessionId: string): PaymentSession {
     const session = sessions.get(sessionId);
@@ -128,9 +121,7 @@ export const PaymentService = {
     return sessions.get(sessionId);
   },
 
-  // ─── Authorize ─────────────────────────────────────────────────────────────
-  // Called by the frontend after Stripe.js confirms payment.
-  // In production: Stripe sends a webhook → you call this.
+  
 
   async authorize(sessionId: string): Promise<PaymentSession> {
     const session = PaymentService.getSession(sessionId);
@@ -150,9 +141,7 @@ export const PaymentService = {
     return session;
   },
 
-  // ─── Capture ───────────────────────────────────────────────────────────────
-  // Captures an authorized payment.
-  // For Stripe: call stripe.paymentIntents.capture(payment_intent_id).
+  
 
   async capture(input: CapturePaymentInput): Promise<PaymentSession> {
     const { session_id, order_id } = input;
@@ -165,12 +154,9 @@ export const PaymentService = {
       );
     }
 
-    await sleep(300); // simulate gateway call
+    await sleep(300);
 
-    // Stripe capture (production):
-    // if (session.provider_id === "stripe") {
-    //   await stripe.paymentIntents.capture(session.data.payment_intent_id as string);
-    // }
+    
 
     session.status = "captured";
     sessions.set(session_id, session);
@@ -183,9 +169,7 @@ export const PaymentService = {
     return session;
   },
 
-  // ─── Refund ────────────────────────────────────────────────────────────────
-  // Issues a partial or full refund against a captured session.
-  // Validates that cumulative refunds do not exceed the original charge.
+  
 
   async refund(input: RefundPaymentInput): Promise<Refund> {
     const { session_id, order_id, amount, reason = "customer_request" } = input;
@@ -203,7 +187,7 @@ export const PaymentService = {
       throw new ServiceError("INVALID_AMOUNT", "Refund amount must be greater than zero");
     }
 
-    // ── Guard: total refunded so far + this amount must not exceed original charge ──
+    
     const alreadyRefunded = _totalRefunded(session_id);
     const remaining       = session.amount - alreadyRefunded;
 
@@ -214,15 +198,9 @@ export const PaymentService = {
       );
     }
 
-    await sleep(400); // simulate gateway
+    await sleep(400); 
 
-    // Stripe refund (production):
-    // if (session.provider_id === "stripe") {
-    //   await stripe.refunds.create({
-    //     payment_intent: session.data.payment_intent_id as string,
-    //     amount,
-    //   });
-    // }
+    
 
     const refund: Refund = {
       id:         generateId("ref"),
@@ -234,10 +212,10 @@ export const PaymentService = {
 
     refunds.set(refund.id, refund);
 
-    // If fully refunded update session status
+    
     const newTotal = alreadyRefunded + amount;
     if (newTotal >= session.amount) {
-      session.status = "captured"; // keep captured — track refund state at order level
+      session.status = "captured"; 
     }
     sessions.set(session_id, session);
 
@@ -246,8 +224,6 @@ export const PaymentService = {
     return refund;
   },
 
-  // ─── Cancel Session ────────────────────────────────────────────────────────
-  // Called when an order is cancelled before capture.
 
   async cancelSession(sessionId: string, orderId: string): Promise<PaymentSession> {
     const session = PaymentService.getSession(sessionId);
@@ -261,10 +237,6 @@ export const PaymentService = {
 
     await sleep(150);
 
-    // Stripe cancel (production):
-    // if (session.provider_id === "stripe" && session.status !== "cancelled") {
-    //   await stripe.paymentIntents.cancel(session.data.payment_intent_id as string);
-    // }
 
     session.status = "cancelled";
     sessions.set(sessionId, session);
@@ -277,40 +249,29 @@ export const PaymentService = {
     return session;
   },
 
-  // ─── Webhook Handler ───────────────────────────────────────────────────────
-  // Processes incoming Stripe webhooks in production.
-  // Mount this at POST /webhooks/stripe in your API server.
 
   async handleStripeWebhook(
     rawBody: string,
     signature: string,
   ): Promise<{ received: boolean }> {
-    // Production:
-    // const event = stripe.webhooks.constructEvent(rawBody, signature, STRIPE_WEBHOOK_SECRET);
-    // switch (event.type) {
-    //   case "payment_intent.succeeded": ...
-    //   case "payment_intent.payment_failed": ...
-    //   case "charge.refunded": ...
-    // }
-
-    // Hackathon: log and acknowledge
+    
     console.log("[PaymentService] Stripe webhook received (mock):", signature.slice(0, 20));
     return { received: true };
   },
 
-  // ─── Refund history for a session ──────────────────────────────────────────
+  
 
   getRefunds(sessionId: string): Refund[] {
     return [...refunds.values()].filter(
       (r) => {
-        // Link refunds back via order → session
+        
         const sid = orderSessionIndex.get(r.order_id);
         return sid === sessionId;
       },
     );
   },
 
-  // ─── Summary ───────────────────────────────────────────────────────────────
+  
 
   summary(sessionId: string): {
     charged: number;
@@ -330,7 +291,7 @@ export const PaymentService = {
     };
   },
 
-  // ─── Stats (admin dashboard) ───────────────────────────────────────────────
+  
 
   stats(): {
     total_sessions: number;
@@ -360,7 +321,7 @@ export const PaymentService = {
   },
 };
 
-// ─── Private Helpers ──────────────────────────────────────────────────────────
+
 
 function _totalRefunded(sessionId: string): number {
   return [...refunds.values()]
