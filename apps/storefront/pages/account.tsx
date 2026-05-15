@@ -1,5 +1,4 @@
-// apps/storefront/pages/account.tsx
-// Route: /account — login / register / dashboard
+
 
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
@@ -16,9 +15,9 @@ export default function AccountPage() {
   const [form, setForm]         = useState({ email: "", password: "", first_name: "", last_name: "" });
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
-  // Check if already logged in
+  
   if (token && !customer && mode !== "dashboard") {
-    // Validate token and fetch customer
+    
     fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
@@ -28,7 +27,7 @@ export default function AccountPage() {
       .catch(() => { localStorage.removeItem("cc_token"); setToken(null); });
   }
 
-  // Initialize Google Sign-In
+  
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID || mode === "dashboard") return;
 

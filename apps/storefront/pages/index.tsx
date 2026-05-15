@@ -1,19 +1,11 @@
-// apps/storefront/pages/index.tsx
-// Storefront homepage — product grid with filters, search, and cart integration
-//
-// Integration:
-//   - Place at: apps/storefront/pages/index.tsx
-//   - Wrap in <Layout> (which provides CartProvider) in your router/main entry
-//   - CartDrawer import path: ../CartDrawer  (already in your project)
-//   - Product handle links go to: /products/[handle]  (your [handle]/page.tsx)
-//   - Replace fetchProducts() mock with your real API when backend is ready
+
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useCartState, useCartDispatch } from "../Layout";
 import CartDrawer from "../CartDrawer";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface Product {
   id: string;
   handle: string;
@@ -21,8 +13,8 @@ interface Product {
   category: string;
   status: "published" | "draft";
   thumbnail: string;
-  price: number;          // dollars
-  originalPrice?: number; // for sale badge
+  price: number;         
+  originalPrice?: number;
   inventory: number;
   tags: string[];
   rating: number;
@@ -35,7 +27,7 @@ interface FetchResult {
   total: number;
 }
 
-// ─── Mock data — swap fetchProducts() with your real API call ─────────────────
+
 const PRODUCT_DATA: Product[] = Array.from({ length: 60 }, (_, i) => {
   const titles = [
     "Obsidian Crew Neck", "Slate Cargo Pant", "Onyx Hoodie", "Granite Bomber",
@@ -102,7 +94,7 @@ async function fetchProducts({
   };
 }
 
-// ─── CSS ──────────────────────────────────────────────────────────────────────
+
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -430,7 +422,7 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-// ─── Product Card ─────────────────────────────────────────────────────────────
+
 function ProductCard({
   product,
   listView,
@@ -459,14 +451,14 @@ function ProductCard({
     <div
       className={`product-card${listView ? " list-card" : ""}`}
       onClick={() => {
-        // Navigate to product page — use your router here
+        
         window.location.href = `/products/${product.handle}`;
       }}
     >
       <div className="card-img-wrap">
         <img src={product.thumbnail} alt={product.title} className="card-img" loading="lazy" />
 
-        {/* Badges */}
+        
         {product.tags.length > 0 && (
           <div className="card-badges">
             {product.tags.map((tag) => (
@@ -475,7 +467,7 @@ function ProductCard({
           </div>
         )}
 
-        {/* Quick-add overlay (grid view) */}
+        
         {!listView && (
           <div className="card-quick-add">
             <button
@@ -539,7 +531,7 @@ function ProductCard({
   );
 }
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
 function SkeletonCard() {
   return (
     <div className="skeleton-card">
@@ -553,10 +545,10 @@ function SkeletonCard() {
   );
 }
 
-// ─── Main Storefront Page ─────────────────────────────────────────────────────
+
 export default function StorefrontPage() {
   const { itemCount } = useCartState();
-  // useCartDispatch's types may be overly strict here; cast to any so addItem is callable
+  
   const { addItem } = useCartDispatch() as any;
 
   const [cartOpen, setCartOpen] = useState(false);
@@ -571,7 +563,7 @@ export default function StorefrontPage() {
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // Debounce search
+  
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 350);
     return () => clearTimeout(t);
@@ -586,7 +578,7 @@ export default function StorefrontPage() {
       initialPageParam: 0,
     });
 
-  // Infinite scroll
+
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -634,7 +626,7 @@ export default function StorefrontPage() {
     <>
       <style>{css}</style>
 
-      {/* ── Navbar ── */}
+      
       <nav className="nav">
         <a href="/" className="nav-logo">
           <span className="nav-logo-dot" />
@@ -656,7 +648,7 @@ export default function StorefrontPage() {
         </div>
       </nav>
 
-      {/* ── Hero ── */}
+      
       <section className="hero">
         <div className="hero-eyebrow">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
@@ -677,7 +669,7 @@ export default function StorefrontPage() {
         </div>
       </section>
 
-      {/* ── Category strip ── */}
+      
       <div className="cat-strip">
         {CATEGORIES.map((c) => (
           <button
@@ -690,9 +682,9 @@ export default function StorefrontPage() {
         ))}
       </div>
 
-      {/* ── Main layout ── */}
+      
       <div className="shop-layout" id="products">
-        {/* Sidebar */}
+        
         <aside className="sidebar">
           <div className="sidebar-section">
             <div className="sidebar-label">Sort by</div>
@@ -747,9 +739,9 @@ export default function StorefrontPage() {
           )}
         </aside>
 
-        {/* Grid column */}
+        
         <div className="grid-col">
-          {/* Toolbar */}
+          
           <div className="toolbar">
             <div className="search-wrap">
               <span className="search-icon">
@@ -780,7 +772,7 @@ export default function StorefrontPage() {
               {isFetching && !isLoading ? "…" : `${total} products`}
             </span>
 
-            {/* View mode toggle */}
+            
             <div className="view-btns">
               {(["4", "3", "list"] as const).map((v) => (
                 <button
@@ -805,7 +797,7 @@ export default function StorefrontPage() {
             </div>
           </div>
 
-          {/* Grid */}
+          
           <div className={`product-grid grid-${viewMode}`}>
             {isLoading
               ? Array.from({ length: 12 }, (_, i) => <SkeletonCard key={i} />)
@@ -841,10 +833,10 @@ export default function StorefrontPage() {
         </div>
       </div>
 
-      {/* ── Cart Drawer ── */}
+      
       {cartOpen && <CartDrawer />}
 
-      {/* ── Toast ── */}
+      
       {toast && (
         <div className="toast">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

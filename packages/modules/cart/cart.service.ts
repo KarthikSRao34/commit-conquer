@@ -1,4 +1,4 @@
-// packages/modules/cart/cart.service.ts
+
 
 import {
   type Cart,
@@ -15,14 +15,13 @@ import { eventBus, EVENT } from "../../core/event-bus";
 import { ProductModel } from "../products/product.model";
 import { ServiceError } from "../products/product.service";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+
 
 const SHIPPING_FLAT_RATE   = 599;   // $5.99 flat shipping in cents
 const FREE_SHIPPING_ABOVE  = 10000; // Free shipping over $100
 const TAX_RATE_PERCENT     = 8.875; // %
 
-// ─── Discount Code Registry ───────────────────────────────────────────────────
-// Hardcoded for the hackathon — replace with DB lookup later.
+
 
 const DISCOUNT_CODES: Record<string, { type: "percentage" | "fixed"; value: number }> = {
   LAUNCH10:  { type: "percentage", value: 10 },
@@ -31,15 +30,15 @@ const DISCOUNT_CODES: Record<string, { type: "percentage" | "fixed"; value: numb
   FLAT1000:  { type: "fixed",      value: 1000 },   // $10 off
 };
 
-// ─── In-Memory Cart Store ─────────────────────────────────────────────────────
+
 
 const carts = new Map<string, Cart>();
 
-// ─── Cart Service ─────────────────────────────────────────────────────────────
+
 
 export const CartService = {
 
-  // ─── Create ────────────────────────────────────────────────────────────────
+  
 
   async create(email?: string): Promise<Cart> {
     const cart: Cart = {
@@ -62,7 +61,7 @@ export const CartService = {
     return cart;
   },
 
-  // ─── Get ───────────────────────────────────────────────────────────────────
+  
 
   get(cartId: string): Cart {
     const cart = carts.get(cartId);
@@ -70,9 +69,7 @@ export const CartService = {
     return cart;
   },
 
-  // ─── Add Item ──────────────────────────────────────────────────────────────
-  // Validates stock before adding. If the variant is already in cart,
-  // increments quantity instead of duplicating.
+  
 
   async addItem(
     cartId: string,
@@ -82,7 +79,7 @@ export const CartService = {
   ): Promise<Cart> {
     const cart = CartService.get(cartId);
 
-    // ── Validate product + variant exist ──
+    
     const product = ProductModel.findById(productId);
     if (!product) {
       throw new ServiceError("PRODUCT_NOT_FOUND", `Product ${productId} not found`);
@@ -93,7 +90,7 @@ export const CartService = {
       throw new ServiceError("VARIANT_NOT_FOUND", `Variant ${variantId} not found`);
     }
 
-    // ── Stock check ──
+    
     const existingLine = cart.items.find((i) => i.variant_id === variantId);
     const currentQtyInCart = existingLine?.quantity ?? 0;
     const requested = currentQtyInCart + quantity;
@@ -105,7 +102,7 @@ export const CartService = {
       );
     }
 
-    // ── Add or increment ──
+    
     if (existingLine) {
       existingLine.quantity += quantity;
     } else {
@@ -130,7 +127,7 @@ export const CartService = {
     return updated;
   },
 
-  // ─── Remove Item ───────────────────────────────────────────────────────────
+  
 
   async removeItem(cartId: string, lineItemId: string): Promise<Cart> {
     const cart = CartService.get(cartId);
@@ -150,8 +147,7 @@ export const CartService = {
     return updated;
   },
 
-  // ─── Update Quantity ───────────────────────────────────────────────────────
-  // Setting quantity to 0 removes the line item.
+  
 
   async updateQuantity(
     cartId: string,
@@ -192,7 +188,7 @@ export const CartService = {
     return updated;
   },
 
-  // ─── Apply Discount Code ───────────────────────────────────────────────────
+  
 
   async applyDiscount(cartId: string, code: string): Promise<Cart> {
     const cart = CartService.get(cartId);
@@ -216,7 +212,7 @@ export const CartService = {
     return updated;
   },
 
-  // ─── Remove Discount ───────────────────────────────────────────────────────
+  
 
   async removeDiscount(cartId: string): Promise<Cart> {
     const cart = CartService.get(cartId);
@@ -226,7 +222,7 @@ export const CartService = {
     return updated;
   },
 
-  // ─── Set Email ─────────────────────────────────────────────────────────────
+  
 
   async setEmail(cartId: string, email: string): Promise<Cart> {
     const cart = CartService.get(cartId);
@@ -236,7 +232,7 @@ export const CartService = {
     return cart;
   },
 
-  // ─── Set Shipping Address ──────────────────────────────────────────────────
+  
 
   async setShippingAddress(cartId: string, address: Address): Promise<Cart> {
     const cart = CartService.get(cartId);
@@ -247,7 +243,7 @@ export const CartService = {
     return updated;
   },
 
-  // ─── Set Billing Address ───────────────────────────────────────────────────
+  
 
   async setBillingAddress(cartId: string, address: Address): Promise<Cart> {
     const cart = CartService.get(cartId);
@@ -257,14 +253,12 @@ export const CartService = {
     return cart;
   },
 
-  // ─── Complete Cart → Order ─────────────────────────────────────────────────
-  // Called by OrderService after payment is confirmed.
-  // Marks the cart as completed and removes it from active carts.
+  
 
   async complete(cartId: string): Promise<{ cart: Cart; order_id: string }> {
     const cart = CartService.get(cartId);
 
-    // ── Guard: cart must have email + address + items ──
+    
     if (!cart.email) {
       throw new ServiceError("MISSING_EMAIL", "Cart must have an email before completing");
     }
@@ -275,7 +269,7 @@ export const CartService = {
       throw new ServiceError("EMPTY_CART", "Cannot complete an empty cart");
     }
 
-    // Simulate network delay for hackathon demo
+    
     await sleep(200);
 
     const orderId = generateId("ord");
@@ -291,7 +285,7 @@ export const CartService = {
     return { cart, order_id: orderId };
   },
 
-  // ─── Clear ─────────────────────────────────────────────────────────────────
+  
 
   async clear(cartId: string): Promise<Cart> {
     const cart = CartService.get(cartId);
@@ -302,7 +296,7 @@ export const CartService = {
     return updated;
   },
 
-  // ─── Summary (for checkout display) ───────────────────────────────────────
+  
 
   summary(cartId: string): {
     item_count: number;
@@ -324,22 +318,16 @@ export const CartService = {
   },
 };
 
-// ─── Private: Recalculate Totals ──────────────────────────────────────────────
-// Called after every mutation. Order of operations:
-//   1. subtotal  = sum of (price × qty) for all items
-//   2. discount  = apply code if present
-//   3. shipping  = flat rate, waived above FREE_SHIPPING_ABOVE
-//   4. tax       = applied on (subtotal - discount)
-//   5. total     = subtotal - discount + shipping + tax
+
 
 function _recalc(cart: Cart): Cart {
-  // 1. Subtotal
+  
   const subtotal = cart.items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0,
   );
 
-  // 2. Discount
+  
   let discountAmount = 0;
   if (cart.discount_code) {
     const rule = DISCOUNT_CODES[cart.discount_code];
@@ -348,15 +336,14 @@ function _recalc(cart: Cart): Cart {
     }
   }
 
-  // 3. Shipping — free above threshold
+  
   const shippingTotal =
     subtotal - discountAmount >= FREE_SHIPPING_ABOVE ? 0 : SHIPPING_FLAT_RATE;
 
-  // 4. Tax on discounted subtotal
   const taxBase  = Math.max(0, subtotal - discountAmount);
   const taxTotal = calcTax(taxBase, TAX_RATE_PERCENT);
 
-  // 5. Grand total
+  
   const total = taxBase + shippingTotal + taxTotal;
 
   return {

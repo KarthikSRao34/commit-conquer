@@ -1,18 +1,9 @@
-// apps/storefront/Layout.jsx
-// Wraps all storefront pages with:
-//   - CartProvider (global cart state)
-//   - Header with nav + cart icon
-//   - Footer
-//   - <Outlet /> for child routes (React Router)
-//
-// Exports:
-//   useCartState()    → { items, count, total, isOpen }
-//   useCartDispatch() → dispatch({ type, payload })
+
 
 import { createContext, useContext, useReducer } from "react";
 import { Outlet, Link, NavLink, useNavigate } from "react-router-dom";
 
-// ─── Cart Context & Reducer ────────────────────────────────────────────────────
+
 
 const CartStateCtx    = createContext(null);
 const CartDispatchCtx = createContext(null);
@@ -80,7 +71,7 @@ function CartProvider({ children }) {
 export function useCartState()    { return useContext(CartStateCtx); }
 export function useCartDispatch() { return useContext(CartDispatchCtx); }
 
-// ─── Header ───────────────────────────────────────────────────────────────────
+
 
 function Header() {
   const cart     = useCartState();
@@ -128,7 +119,7 @@ function Header() {
   );
 }
 
-// ─── Footer ───────────────────────────────────────────────────────────────────
+
 
 function Footer() {
   return (
@@ -145,7 +136,7 @@ function Footer() {
   );
 }
 
-// ─── Root Layout ──────────────────────────────────────────────────────────────
+
 
 export default function Layout() {
   return (
@@ -161,7 +152,7 @@ export default function Layout() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+
 
 const s = {
   root:    { minHeight: "100vh", display: "flex", flexDirection: "column", background: "#0c0c0e", color: "#e8e8f0" },

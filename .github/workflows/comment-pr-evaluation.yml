@@ -1,0 +1,46 @@
+name: Comment PR Evaluation
+
+on:
+  workflow_run:
+    workflows: ["Evaluate PR"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  comment:
+    # Only comment for PR-triggered runs from the Evaluate PR workflow.
+    if: ${{ github.event.workflow_run.event == 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Download score artifact from evaluate run
+        uses: actions/download-artifact@v4
+        with:
+          name: score-run-${{ github.event.workflow_run.id }}
+          path: eval_results/
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve PR number from artifact metadata
+        id: pr
+        run: |
+          PR_NUMBER="$(cat eval_results/pr_number.txt 2>/dev/null || true)"
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Post PR comment
+        if: ${{ steps.pr.outputs.pr_number != '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+          REPO: ${{ github.repository }}
+        run: node eval/post_comment.js

@@ -10,7 +10,7 @@ async function fetchStats() {
     const res = await fetch(`${ADMIN}/stats`, { headers: HEADERS });
     if (res.ok) return res.json();
   } catch {}
-  // Demo data if backend not running
+  
   return {
     products: { total: 24, published: 20, draft: 4 },
     orders:   { total: 47, pending: 8, fulfilled: 35, cancelled: 4, revenue: 428900 },

@@ -1,20 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 
-// ─── DataTable ────────────────────────────────────────────────────────────────
-// Props:
-//   columns: Array<{
-//     key: string,           — unique key, used for sort persistence
-//     header: string,        — column header label
-//     width?: number,        — optional fixed width in px
-//     sortable?: boolean,    — enables click-to-sort on this column
-//     render?: (row) => ReactNode  — custom cell renderer, defaults to row[key]
-//   }>
-//   data: Array<object>      — rows to display
-//   storageKey?: string      — sessionStorage key for sort persistence (default: "datatable_sort")
-//   rowKey: string           — field used as React key (default: "id")
-//   onRowClick?: (row) => void
-//   isLoading?: boolean
-//   emptyMessage?: string
+
 
 export default function DataTable({
   columns = [],
@@ -25,9 +11,7 @@ export default function DataTable({
   isLoading = false,
   emptyMessage = "No data found",
 }) {
-  // ─── Persistent sort state ─────────────────────────────────────────────────
-  // FIX: Sort state is read from sessionStorage on mount so navigating away
-  // and back restores the previous sort — it no longer resets to default.
+  
   const [sortState, setSortState] = useState(() => {
     try {
       const saved = sessionStorage.getItem(storageKey);
@@ -37,12 +21,12 @@ export default function DataTable({
     }
   });
 
-  // Persist sort to sessionStorage whenever it changes
+  
   useEffect(() => {
     try {
       sessionStorage.setItem(storageKey, JSON.stringify(sortState));
     } catch {
-      // sessionStorage unavailable — silently skip persistence
+      
     }
   }, [sortState, storageKey]);
 
@@ -53,24 +37,21 @@ export default function DataTable({
     }));
   }, []);
 
-  // ─── Stable column widths ──────────────────────────────────────────────────
-  // FIX: Column widths are measured once on first render and stored in a ref.
-  // They never change on re-render because we read from the ref, not from
-  // live DOM measurements on every render.
+  
   const colWidths = useRef({});
   const thRefs = useRef({});
 
   useEffect(() => {
-    // Measure on first render only — skip if already measured
+    
     columns.forEach((col) => {
       if (colWidths.current[col.key] === undefined && thRefs.current[col.key]) {
         colWidths.current[col.key] =
           col.width ?? thRefs.current[col.key].offsetWidth;
       }
     });
-  }, []); // empty dep array — runs once
+  }, []); 
 
-  // ─── Sort data ─────────────────────────────────────────────────────────────
+
   const sorted = [...data].sort((a, b) => {
     if (!sortState.key) return 0;
     const aVal = a[sortState.key];
@@ -185,7 +166,7 @@ export default function DataTable({
   );
 }
 
-// ─── Sort Icon ────────────────────────────────────────────────────────────────
+
 function SortIcon({ active, dir }) {
   return (
     <span
@@ -232,7 +213,7 @@ function SortIcon({ active, dir }) {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = {
   wrap: {
     width: "100%",
@@ -241,7 +222,7 @@ const styles = {
   table: {
     width: "100%",
     borderCollapse: "collapse",
-    tableLayout: "fixed", // FIX: fixed layout prevents column width shifts on re-render
+    tableLayout: "fixed", 
   },
   th: {
     padding: "10px 14px",

@@ -23,7 +23,7 @@ function AdminLayout() {
         overflow: "hidden",
       }}
     >
-      {/* Sidebar */}
+      
       <aside
         style={{
           width: 180,

@@ -11,7 +11,7 @@ async function fetchProducts(search = "", status = "all") {
     const res = await fetch(`${ADMIN}/products?${params}`, { headers: HEADERS });
     if (res.ok) { const d = await res.json(); return d.products ?? d.data ?? []; }
   } catch {}
-  // Demo data
+  
   const titles = ["Obsidian Crew Neck","Slate Cargo Pant","Onyx Hoodie","Granite Bomber","Ash Trench Coat","Carbon Jogger","Basalt Windbreaker","Charcoal Denim","Iron Fleece","Flint Overshirt","Coal Polo","Cinder Vest"];
   return Array.from({ length: 16 }, (_, i) => ({
     id: `prod_${String(i+1).padStart(3,"0")}`,
@@ -93,7 +93,7 @@ export default function AdminProducts() {
         <button onClick={() => setShowAdd(true)} style={s.addBtn}>+ New Product</button>
       </div>
 
-      {/* Filters */}
+      
       <div style={s.filters}>
         <input style={s.search} placeholder="Search products…" value={search} onChange={(e) => setSearch(e.target.value)} />
         <select style={s.select} value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -106,7 +106,7 @@ export default function AdminProducts() {
         )}
       </div>
 
-      {/* Table */}
+      
       <div style={s.tableWrap}>
         <table style={s.table}>
           <thead>
@@ -165,7 +165,7 @@ export default function AdminProducts() {
         </table>
       </div>
 
-      {/* Add product modal */}
+      
       {showAdd && (
         <div style={s.modalBg} onClick={() => setShowAdd(false)}>
           <div style={s.modal} onClick={(e) => e.stopPropagation()}>
