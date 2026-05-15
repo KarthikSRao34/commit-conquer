@@ -406,8 +406,12 @@ export const OrderService = {
       );
     }
 
-    if (amount <= 0) {
-      throw new ServiceError("INVALID_AMOUNT", "Refund amount must be greater than zero");
+    if (typeof amount !== "number" || Number.isNaN(amount) || amount <= 0) {
+      throw new ServiceError("INVALID_AMOUNT", "Refund amount must be a valid number greater than zero");
+    }
+
+    if (Number.isNaN(order.total)) {
+      throw new ServiceError("INVALID_ORDER", "Order total is corrupted (NaN)");
     }
 
     if (amount > order.total) {

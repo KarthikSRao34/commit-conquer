@@ -52,8 +52,8 @@ export const PaymentService = {
       customer_email,
     } = input;
 
-    if (amount <= 0) {
-      throw new ServiceError("INVALID_AMOUNT", "Payment amount must be greater than zero");
+    if (typeof amount !== "number" || Number.isNaN(amount) || amount <= 0) {
+      throw new ServiceError("INVALID_AMOUNT", "Payment amount must be a valid number greater than zero");
     }
 
     
@@ -61,6 +61,12 @@ export const PaymentService = {
     if (existingSessionId) {
       const existing = sessions.get(existingSessionId);
       if (existing && existing.status === "pending") {
+        // Idempotency: Reuse existing session if it matches the requested amount
+        if (existing.amount === amount) {
+          return existing;
+        }
+        
+        // Otherwise cancel the old session as it's stale (e.g. amount changed)
         existing.status = "cancelled";
         sessions.set(existingSessionId, existing);
       }
@@ -183,8 +189,8 @@ export const PaymentService = {
       );
     }
 
-    if (amount <= 0) {
-      throw new ServiceError("INVALID_AMOUNT", "Refund amount must be greater than zero");
+    if (typeof amount !== "number" || Number.isNaN(amount) || amount <= 0) {
+      throw new ServiceError("INVALID_AMOUNT", "Refund amount must be a valid number greater than zero");
     }
 
     
@@ -199,6 +205,16 @@ export const PaymentService = {
     }
 
     await sleep(400); 
+
+    // Race condition fix: Re-verify after sleep
+    const currentAlreadyRefunded = _totalRefunded(session_id);
+    const currentRemaining = session.amount - currentAlreadyRefunded;
+    if (amount > currentRemaining) {
+      throw new ServiceError(
+        "REFUND_EXCEEDS_CHARGE",
+        `Concurrent refund detected. Refund of ${formatMoney(amount)} exceeds remaining refundable amount of ${formatMoney(currentRemaining)}`,
+      );
+    } 
 
     
 

@@ -71,57 +71,64 @@ function useLocalCart() {
 }
 
 
+const ADMIN_API = "http://localhost:4000/api/admin";
+
 const fetchProducts = async ({ pageParam = 0, filters }) => {
-  await new Promise((r) => setTimeout(r, 600));
-  const limit = 12;
-  const total = 47;
-  const allProducts = Array.from({ length: total }, (_, i) => ({
-    id: `prod_${String(i + 1).padStart(3, "0")}`,
-    thumbnail: `https://picsum.photos/seed/${i + 1}/48/48`,
-    title: [
-      "Obsidian Crew Neck",
-      "Slate Cargo Pant",
-      "Onyx Hoodie",
-      "Granite Bomber",
-      "Ash Trench Coat",
-      "Carbon Jogger",
-      "Basalt Windbreaker",
-      "Charcoal Denim",
-      "Iron Fleece",
-      "Flint Overshirt",
-      "Coal Polo",
-      "Cinder Vest",
-    ][i % 12],
-    status: ["published", "draft", "published", "published", "draft"][i % 5],
-    price: 29 + ((i * 17) % 200),
-    priceLabel: `$${(29 + ((i * 17) % 200)).toFixed(2)}`,
-    inventory: 200 - ((i * 13) % 200),
-    category: ["Tops", "Bottoms", "Outerwear", "Accessories"][i % 4],
-    updatedAt: new Date(Date.now() - i * 86400000 * 3).toLocaleDateString(),
-  }));
-
-  let filtered = allProducts;
-  if (filters.search)
-    filtered = filtered.filter((p) =>
-      p.title.toLowerCase().includes(filters.search.toLowerCase()),
-    );
-  if (filters.status && filters.status !== "all")
-    filtered = filtered.filter((p) => p.status === filters.status);
-  if (filters.category && filters.category !== "all")
-    filtered = filtered.filter((p) => p.category === filters.category);
-
-  const start = pageParam * limit;
-  const items = filtered.slice(start, start + limit);
+  const params = new URLSearchParams({
+    limit: "12",
+    offset: (pageParam * 12).toString(),
+    search: filters.search || "",
+    status: filters.status || "all",
+    category: filters.category || "all",
+  });
+  
+  const res = await fetch(`${ADMIN_API}/products?${params}`, {
+    headers: { "x-admin-secret": "admin_dev_secret" }
+  });
+  
+  if (!res.ok) {
+    throw new Error("Failed to fetch products");
+  }
+  
+  const data = await res.json();
+  const rawProducts = data.products ?? data.data ?? [];
+  
+  const products = rawProducts.map(p => {
+    const minPrice = p.variants?.length ? Math.min(...p.variants.map(v => v.price)) : 0;
+    const totalInv = p.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) || 0;
+    return {
+      ...p,
+      priceLabel: `$${(minPrice / 100).toFixed(2)}`,
+      price: minPrice / 100,
+      inventory: totalInv,
+      updatedAt: new Date(p.updated_at || p.created_at || Date.now()).toLocaleDateString(),
+    };
+  });
+  
+  const total = data.total ?? products.length;
+  const start = pageParam * 12;
+  
   return {
-    products: items,
-    nextPage: start + limit < filtered.length ? pageParam + 1 : undefined,
-    total: filtered.length,
+    products,
+    nextPage: start + 12 < total ? pageParam + 1 : undefined,
+    total,
   };
 };
 
 const deleteProducts = async (ids) => {
-  await new Promise((r) => setTimeout(r, 800));
-  return { deleted: ids };
+  const res = await fetch(`${ADMIN_API}/products`, {
+    method: "DELETE",
+    headers: { 
+      "Content-Type": "application/json",
+      "x-admin-secret": "admin_dev_secret" 
+    },
+    body: JSON.stringify({ ids }),
+  });
+  
+  if (!res.ok) {
+    throw new Error("Failed to delete products");
+  }
+  return res.json();
 };
 
 
