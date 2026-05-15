@@ -322,11 +322,10 @@ export const CartService = {
 
 function _recalc(cart: Cart): Cart {
   
-  const subtotal = cart.items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
-
+  const subtotal = cart.items.reduce((sum, item) => {
+    const price = Number.isFinite(item.price) ? item.price : 0;
+    return sum + (price * item.quantity);
+  }, 0);
   
   let discountAmount = 0;
   if (cart.discount_code) {
