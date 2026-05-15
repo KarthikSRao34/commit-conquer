@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCartDispatch } from "../Layout";
 import CartDrawer from "../CartDrawer";
 
-const API = "/api/store";
+const API = "/api/v1/store";
 
 async function fetchProduct(handle: string) {
   // Try by handle first, fall back to mock

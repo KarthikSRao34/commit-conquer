@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
-const ADMIN = "/api/admin";
+const ADMIN = "/api/v1/admin";
 const HEADERS = { "X-Admin-Secret": "admin_dev_secret" };
 
 async function fetchStats() {
