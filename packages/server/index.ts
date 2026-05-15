@@ -37,6 +37,11 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import "dotenv/config";
+import { enforceEnv } from "./src/validateEnv";
+
+// ─── Validate environment variables before anything else ──────────────────────
+// Fails fast with a clear error if required vars are missing or malformed.
+enforceEnv();
 
 // ── Module Services (all already exist in your repo) ──────────────────────────
 import { ProductService, ServiceError } from "../modules/products/product.service.ts";
