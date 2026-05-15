@@ -286,7 +286,7 @@ const STEPS: { key: Step; label: string }[] = [
 export default function CheckoutForm() {
   const { items, total } = useCartState() ?? { items: [], total: 0 };
   const dispatch = useCartDispatch();
-  const clearCart: () => void = (dispatch as any)?.clearCart ?? (() => {});
+  const clearCart = dispatch.clearCart;
 
   const [step, setStep] = useState<Step>("address");
   const [address, setAddress] = useState<AddressForm>(EMPTY_ADDRESS);
@@ -299,9 +299,9 @@ export default function CheckoutForm() {
   const [isPlacing, setIsPlacing] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
 
-  const TAX_RATE = 0.08;
-  const discountAmt = discountApplied ? Math.round(total * 0.1) : 0;
-  const subtotal = total * 100;
+  const TAX_RATE = 0.08875;
+  const subtotal = total; 
+  const discountAmt = discountApplied ? Math.round(subtotal * 0.1) : 0;
   const shipping = shippingOption.price;
   const tax = Math.round((subtotal - discountAmt) * TAX_RATE);
   const grandTotal = subtotal - discountAmt + shipping + tax;
@@ -690,11 +690,11 @@ export default function CheckoutForm() {
                       <div className="review-item-info">
                         <div className="review-item-title">{item.title}</div>
                         <div className="review-item-meta">
-                          Qty {item.quantity} × ${item.price?.toFixed(2)}
+                          Qty {item.quantity} × ${(item.price / 100).toFixed(2)}
                         </div>
                       </div>
                       <div className="review-item-price">
-                        ${((item.price ?? 0) * item.quantity).toFixed(2)}
+                        ${(((item.price ?? 0) * item.quantity) / 100).toFixed(2)}
                       </div>
                     </div>
                   ))}
@@ -767,7 +767,7 @@ export default function CheckoutForm() {
                     <div className="summary-item-qty">×{item.quantity}</div>
                   </div>
                   <div className="summary-item-price">
-                    ${((item.price ?? 0) * item.quantity).toFixed(2)}
+                    ${(((item.price ?? 0) * item.quantity) / 100).toFixed(2)}
                   </div>
                 </div>
               ))}

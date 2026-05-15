@@ -61,6 +61,12 @@ export const PaymentService = {
     if (existingSessionId) {
       const existing = sessions.get(existingSessionId);
       if (existing && existing.status === "pending") {
+        // Idempotency: Reuse existing session if it matches the requested amount
+        if (existing.amount === amount) {
+          return existing;
+        }
+        
+        // Otherwise cancel the old session as it's stale (e.g. amount changed)
         existing.status = "cancelled";
         sessions.set(existingSessionId, existing);
       }

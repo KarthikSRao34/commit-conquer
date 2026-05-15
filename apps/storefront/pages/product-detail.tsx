@@ -63,19 +63,16 @@ export default function ProductDetail() {
   const addToCart = () => {
     if (!product) return;
     const variant = product.variants?.find((v: any) => v.id === selectedVariant) ?? product.variants?.[0];
-    dispatch?.({
-      type: "ADD_ITEM",
-      payload: {
-        id:        product.id,
-        variantId: variant?.id ?? "default",
-        title:     product.title,
-        price:     (product.price ?? 0) / 100,
-        thumbnail: product.thumbnail,
-        size:      variant?.title,
-        quantity:  qty,
-      },
+    dispatch.addItem({
+      id:        product.id,
+      variantId: variant?.id ?? "default",
+      title:     product.title,
+      price:     product.price ?? 0, // Send as cents
+      thumbnail: product.thumbnail,
+      size:      variant?.title,
+      quantity:  qty,
     });
-    dispatch?.({ type: "TOGGLE_CART", payload: true });
+    dispatch.toggleCart(true);
     setToast("Added to cart!");
     setTimeout(() => setToast(null), 2500);
   };

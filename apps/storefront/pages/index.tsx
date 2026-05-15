@@ -549,7 +549,7 @@ function SkeletonCard() {
 export default function StorefrontPage() {
   const { itemCount } = useCartState();
   
-  const { addItem } = useCartDispatch() as any;
+  const dispatch = useCartDispatch() as any;
 
   const [cartOpen, setCartOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -594,16 +594,16 @@ export default function StorefrontPage() {
   const total = data?.pages[0]?.total ?? 0;
 
   const handleAddToCart = useCallback((product: Product) => {
-    addItem({
+    dispatch.addItem({
       id: product.id,
       title: product.title,
-      price: product.price,
+      price: Math.round(product.price * 100), // Convert dollars to cents for the backend
       thumbnail: product.thumbnail,
       quantity: 1,
     });
     setToast(`${product.title} added to cart`);
     setTimeout(() => setToast(null), 2200);
-  }, [addItem]);
+  }, [dispatch]);
 
   const toggleTag = (tag: string) => {
     setActiveTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);

@@ -8,7 +8,7 @@ export default function CartDrawer() {
   const dispatch = useCartDispatch();
   const navigate = useNavigate();
 
-  const close = () => dispatch({ type: "TOGGLE_CART", payload: false });
+  const close = () => dispatch.toggleCart(false);
 
   const goCheckout = () => {
     close();
@@ -44,7 +44,7 @@ export default function CartDrawer() {
           <div style={s.foot}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
               <span style={{ color: "#aaa", fontSize: 14 }}>Subtotal</span>
-              <span style={{ fontWeight: 700, fontSize: 18 }}>${cart.total.toFixed(2)}</span>
+              <span style={{ fontWeight: 700, fontSize: 18 }}>${(cart.total / 100).toFixed(2)}</span>
             </div>
             <p style={{ color: "#555", fontSize: 12, marginBottom: 16, textAlign: "center" }}>
               Shipping &amp; taxes calculated at checkout
@@ -72,13 +72,13 @@ function CartItem({ item }) {
         {item.size  && <p style={s.meta}>Size: {item.size}</p>}
         {item.color && <p style={s.meta}>Color: {item.color}</p>}
         <p style={{ fontWeight: 700, fontSize: 14, marginTop: 4 }}>
-          ${(item.price * item.quantity).toFixed(2)}
+          ${((item.price * item.quantity) / 100).toFixed(2)}
         </p>
         <div style={s.qtyRow}>
-          <button style={s.qtyBtn} onClick={() => dispatch({ type: "UPDATE_QTY", payload: { ...key, quantity: item.quantity - 1 } })}>−</button>
+          <button style={s.qtyBtn} onClick={() => dispatch.updateQty({ ...key, quantity: item.quantity - 1 })}>−</button>
           <span style={{ minWidth: 20, textAlign: "center", fontSize: 14, fontWeight: 600 }}>{item.quantity}</span>
-          <button style={s.qtyBtn} onClick={() => dispatch({ type: "UPDATE_QTY", payload: { ...key, quantity: item.quantity + 1 } })}>+</button>
-          <button style={s.removeBtn} onClick={() => dispatch({ type: "REMOVE_ITEM", payload: key })}>Remove</button>
+          <button style={s.qtyBtn} onClick={() => dispatch.updateQty({ ...key, quantity: item.quantity + 1 })}>+</button>
+          <button style={s.removeBtn} onClick={() => dispatch.removeItem(key)}>Remove</button>
         </div>
       </div>
     </div>
