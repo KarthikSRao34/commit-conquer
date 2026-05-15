@@ -1,11 +1,11 @@
-// packages/modules/products/product.service.ts
+
 
 import { type Product, type PaginatedResponse } from "../../core/types";
 import { paginate, stripEmpty } from "../../core/utils";
 import { eventBus, EVENT } from "../../core/event-bus";
 import { ProductModel } from "./product.model";
 
-// ─── Input Types ──────────────────────────────────────────────────────────────
+
 
 export interface ListProductsInput {
   offset?: number;
@@ -43,14 +43,11 @@ export interface UpdateProductInput {
   status?: "published" | "draft" | "archived";
 }
 
-// ─── Product Service ──────────────────────────────────────────────────────────
+
 
 export const ProductService = {
 
-  // ─── List ──────────────────────────────────────────────────────────────────
-  // Supports filtering by status, category, and full-text search.
-  // Sorts and paginates before returning.
-
+  
   list(input: ListProductsInput = {}): PaginatedResponse<Product> {
     const {
       offset = 0,
@@ -63,17 +60,17 @@ export const ProductService = {
 
     let products = ProductModel.findAll();
 
-    // ── Filter by status ──
+   
     if (status !== "all") {
       products = products.filter((p) => p.status === status);
     }
 
-    // ── Filter by category ──
+  
     if (category && category !== "all") {
       products = products.filter((p) => p.category === category);
     }
 
-    // ── Full-text search across title, description, tags ──
+  
     if (search && search.trim()) {
       const q = search.trim().toLowerCase();
       products = products.filter(
@@ -85,14 +82,14 @@ export const ProductService = {
       );
     }
 
-    // ── Sort ──
+   
     products = _sort(products, sort);
 
-    // ── Paginate ──
+   
     return paginate(products, offset, limit);
   },
 
-  // ─── Get by ID ─────────────────────────────────────────────────────────────
+  
 
   getById(id: string): Product {
     const product = ProductModel.findById(id);
@@ -100,9 +97,7 @@ export const ProductService = {
     return product;
   },
 
-  // ─── Get by handle ─────────────────────────────────────────────────────────
-  // Used by the storefront [handle] page.
-
+ 
   getByHandle(handle: string): Product {
     const product = ProductModel.findByHandle(handle);
     if (!product) {
@@ -111,7 +106,7 @@ export const ProductService = {
     return product;
   },
 
-  // ─── Create ────────────────────────────────────────────────────────────────
+ 
 
   async create(input: CreateProductInput): Promise<Product> {
     _validateCreate(input);
@@ -142,10 +137,10 @@ export const ProductService = {
     return product;
   },
 
-  // ─── Update ────────────────────────────────────────────────────────────────
+  
 
   async update(id: string, input: UpdateProductInput): Promise<Product> {
-    // Ensure product exists first
+    
     ProductService.getById(id);
 
     const changes = stripEmpty(input as Record<string, unknown>) as Partial<Product>;
@@ -162,10 +157,10 @@ export const ProductService = {
     return updated;
   },
 
-  // ─── Delete ────────────────────────────────────────────────────────────────
+  
 
   async delete(id: string): Promise<{ deleted: string }> {
-    ProductService.getById(id);   // throws if not found
+    ProductService.getById(id);  
 
     const ok = ProductModel.delete(id);
     if (!ok) throw new ServiceError("DELETE_FAILED", `Failed to delete product ${id}`);
@@ -175,8 +170,7 @@ export const ProductService = {
     return { deleted: id };
   },
 
-  // ─── Bulk delete ───────────────────────────────────────────────────────────
-  // Used by the admin Products page bulk-action bar.
+  
 
   async bulkDelete(ids: string[]): Promise<{ deleted: string[]; failed: string[] }> {
     const deleted: string[] = [];
@@ -194,7 +188,7 @@ export const ProductService = {
     return { deleted, failed };
   },
 
-  // ─── Publish / Unpublish ───────────────────────────────────────────────────
+
 
   async publish(id: string): Promise<Product> {
     const updated = await ProductService.update(id, { status: "published" });
@@ -208,9 +202,7 @@ export const ProductService = {
     return ProductService.update(id, { status: "draft" });
   },
 
-  // ─── Inventory update ──────────────────────────────────────────────────────
-  // Called by OrderService after a purchase to decrement stock.
-
+ 
   async adjustInventory(
     productId: string,
     variantId: string,
@@ -232,7 +224,7 @@ export const ProductService = {
       quantity:   qty,
     });
 
-    // Emit low-stock warning at threshold of 5
+    
     if (qty > 0 && qty <= 5) {
       await eventBus.emit(EVENT.INVENTORY_LOW, {
         variant_id: variantId,
@@ -247,15 +239,13 @@ export const ProductService = {
     }
   },
 
-  // ─── Stats ─────────────────────────────────────────────────────────────────
-  // Used by the admin dashboard header cards.
+  
 
   stats() {
     return ProductModel.stats();
   },
 
-  // ─── Categories ────────────────────────────────────────────────────────────
-  // Returns all unique categories across the catalogue.
+ 
 
   categories(): string[] {
     const all = ProductModel.findAll();
@@ -264,8 +254,7 @@ export const ProductService = {
   },
 };
 
-// ─── Service Error ────────────────────────────────────────────────────────────
-// Thrown by service methods so API routes can return the right HTTP status.
+
 
 export class ServiceError extends Error {
   constructor(
@@ -277,7 +266,7 @@ export class ServiceError extends Error {
   }
 }
 
-// ─── Private helpers ──────────────────────────────────────────────────────────
+
 
 function _sort(products: Product[], sort: ListProductsInput["sort"]): Product[] {
   return [...products].sort((a, b) => {
