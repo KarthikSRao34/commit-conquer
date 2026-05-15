@@ -96,30 +96,6 @@ async function fetchProducts({
 
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&display=swap');
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --bg: #0c0c0e; --surface: #141417; --surface2: #1c1c21;
-    --border: #2a2a31; --border-hover: #404050;
-    --text: #e8e8f0; --text-muted: #6b6b80; --text-dim: #9999aa;
-    --accent: #7c6aff; --accent-dim: rgba(124,106,255,0.15); --accent-glow: rgba(124,106,255,0.3);
-    --green: #3ddc97; --green-dim: rgba(61,220,151,0.12);
-    --amber: #f5a623; --amber-dim: rgba(245,166,35,0.12);
-    --red: #ff5c5c; --red-dim: rgba(255,92,92,0.12);
-    --radius: 6px; --radius-lg: 10px; --radius-xl: 16px;
-    --mono: 'DM Mono', monospace; --sans: 'Syne', sans-serif;
-    --transition: 160ms cubic-bezier(0.4,0,0.2,1);
-  }
-
-  html { scroll-behavior: smooth; }
-  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
-
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
-
   /* ── Navbar ── */
   .nav {
     position: sticky; top: 0; z-index: 100;
