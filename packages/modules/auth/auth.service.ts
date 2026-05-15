@@ -255,8 +255,17 @@ export const AuthService = {
       return { reset_token: "noop" };
     }
 
+    const now = Date.now();
+    if (record.reset_token_expires) {
+      const expiresTime = new Date(record.reset_token_expires).getTime();
+      const createdAt = expiresTime - 1000 * 60 * 60;
+      if (now - createdAt < 1000 * 60 * 5) {
+        throw new ServiceError("TOO_MANY_REQUESTS", "Please wait a few minutes before requesting another reset.");
+      }
+    }
+
     const reset_token = _generateResetToken();
-    const expires = new Date(Date.now() + 1000 * 60 * 60);
+    const expires = new Date(now + 1000 * 60 * 60);
 
     record.reset_token = reset_token;
     record.reset_token_expires = expires.toISOString();
