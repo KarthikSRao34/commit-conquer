@@ -9,25 +9,12 @@ import express, {
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import path from "path";
-import dotenv from "dotenv";
-dotenv.config({ path: path.join(__dirname, ".env") });
+import "dotenv/config";
+import { enforceEnv } from "./src/validateEnv";
 
-
-// ─── Env Validation ───────────────────────────────────────────────────────────
-const REQUIRED_ENV_VARS = ["STRIPE_KEY", "DB_URL"];
-const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
-
-if (missingVars.length > 0) {
-  console.error(`
-  ❌ ERROR: Missing required environment variables:
-     ${missingVars.join(", ")}
-
-     The server cannot start without these. Please check your .env file.
-  `);
-  process.exit(1);
-}
-
+// ─── Validate environment variables before anything else ──────────────────────
+// Fails fast with a clear error if required vars are missing or malformed.
+enforceEnv();
 
 
 import { ProductService, ServiceError } from "../modules/products/product.service.ts";
