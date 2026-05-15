@@ -85,6 +85,7 @@ export interface Order {
   shipping_total: number;
   tax_total: number;
   discount_amount: number;
+  discount_code?: string;
   total: number;
   shipping_address: Address;
   billing_address: Address;

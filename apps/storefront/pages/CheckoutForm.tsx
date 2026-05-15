@@ -298,6 +298,8 @@ export default function CheckoutForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPlacing, setIsPlacing] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [discountError, setDiscountError] = useState<string | null>(null);
 
   const TAX_RATE = 0.08;
   const discountAmt = discountApplied ? Math.round(total * 0.1) : 0;
@@ -359,6 +361,19 @@ export default function CheckoutForm() {
 
   const handlePlaceOrder = async () => {
     setIsPlacing(true);
+    setCheckoutError(null);
+
+    // Simulate backend checkout check
+    if (discountApplied) {
+      const usedCodes = JSON.parse(localStorage.getItem('used_discount_codes') || '{}');
+      if (usedCodes[email] === 'HACKATHON10') {
+         setIsPlacing(false);
+         setCheckoutError(`Discount code "HACKATHON10" has already been used by this customer`);
+         return;
+      }
+      usedCodes[email] = 'HACKATHON10';
+      localStorage.setItem('used_discount_codes', JSON.stringify(usedCodes));
+    }
     
     await new Promise((r) => setTimeout(r, 1800));
     const mockOrderId = `ORD-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -369,8 +384,21 @@ export default function CheckoutForm() {
   };
 
   const handleDiscount = () => {
-    if (discountCode.trim().toUpperCase() === "HACKATHON10") {
+    const code = discountCode.trim().toUpperCase();
+    if (code === "HACKATHON10") {
+      const usedCodes = JSON.parse(localStorage.getItem('used_discount_codes') || '{}');
+      if (!email) {
+        setDiscountError("Please enter your email in the shipping address first to apply a coupon.");
+        return;
+      }
+      if (usedCodes[email] === code) {
+         setDiscountError(`Coupon already used.`);
+         return;
+      }
+      setDiscountError(null);
       setDiscountApplied(true);
+    } else if (code) {
+      setDiscountError("Invalid discount code");
     }
   };
 
@@ -726,27 +754,34 @@ export default function CheckoutForm() {
                   </div>
                 </div>
 
-                <div className="section-nav" style={{ marginTop: 24 }}>
-                  <button className="btn btn-ghost" onClick={() => setStep("payment")} style={{ flex: 1 }}>
-                    ← Back
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    onClick={handlePlaceOrder}
-                    disabled={isPlacing || (items as any[]).length === 0}
-                    style={{ flex: 2 }}
-                  >
-                    {isPlacing ? (
-                      <><div className="spinner" /> Placing order…</>
-                    ) : (
-                      <>
-                        Place Order · {fmt(grandTotal)}
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <path d="M5 12h14M12 5l7 7-7 7" />
-                        </svg>
-                      </>
-                    )}
-                  </button>
+                <div className="section-nav" style={{ marginTop: 24, flexDirection: "column" }}>
+                  {checkoutError && (
+                    <div style={{ color: "var(--red)", fontSize: 13, marginBottom: 12, textAlign: "center", padding: "8px", background: "var(--red-dim)", borderRadius: "var(--radius)" }}>
+                      {checkoutError}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+                    <button className="btn btn-ghost" onClick={() => setStep("payment")} style={{ flex: 1 }}>
+                      ← Back
+                    </button>
+                    <button
+                      className="btn btn-primary"
+                      onClick={handlePlaceOrder}
+                      disabled={isPlacing || (items as any[]).length === 0}
+                      style={{ flex: 2 }}
+                    >
+                      {isPlacing ? (
+                        <><div className="spinner" /> Placing order…</>
+                      ) : (
+                        <>
+                          Place Order · {fmt(grandTotal)}
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M5 12h14M12 5l7 7-7 7" />
+                          </svg>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -777,21 +812,31 @@ export default function CheckoutForm() {
 
             {/* Discount */}
             {!discountApplied ? (
-              <div className="discount-row">
-                <input
-                  className="discount-input"
-                  placeholder="Discount code"
-                  value={discountCode}
-                  onChange={(e) => setDiscountCode(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleDiscount()}
-                />
-                <button
-                  className="btn btn-ghost"
-                  style={{ padding: "9px 14px", fontSize: 12 }}
-                  onClick={handleDiscount}
-                >
-                  Apply
-                </button>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <div className="discount-row">
+                  <input
+                    className="discount-input"
+                    placeholder="Discount code"
+                    value={discountCode}
+                    onChange={(e) => {
+                      setDiscountCode(e.target.value);
+                      setDiscountError(null);
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && handleDiscount()}
+                  />
+                  <button
+                    className="btn btn-ghost"
+                    style={{ padding: "9px 14px", fontSize: 12 }}
+                    onClick={handleDiscount}
+                  >
+                    Apply
+                  </button>
+                </div>
+                {discountError && (
+                  <div className="field-error" style={{ marginTop: 6, fontSize: 12 }}>
+                    {discountError}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="discount-applied">
