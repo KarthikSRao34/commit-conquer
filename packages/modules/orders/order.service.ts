@@ -209,6 +209,19 @@ export const OrderService = {
 
   async place(input: PlaceOrderInput): Promise<Order> {
     
+    const tempCart = CartService.get(input.cart_id);
+    if (tempCart.discount_code && tempCart.email) {
+      const hasUsed = [...orders.values()].some(
+        (o) => o.email === tempCart.email && o.discount_code === tempCart.discount_code && o.status !== "cancelled"
+      );
+      if (hasUsed) {
+        throw new ServiceError(
+          "DISCOUNT_ALREADY_USED",
+          `Discount code "${tempCart.discount_code}" has already been used by this customer`
+        );
+      }
+    }
+
     const { cart, order_id } = await CartService.complete(input.cart_id);
 
     
@@ -234,6 +247,7 @@ export const OrderService = {
       shipping_total:      cart.shipping_total,
       tax_total:           cart.tax_total,
       discount_amount:     cart.discount_amount,
+      discount_code:       cart.discount_code,
       total:               cart.total,
       shipping_address:    cart.shipping_address!,
       billing_address:     cart.billing_address ?? cart.shipping_address!,
