@@ -9,11 +9,11 @@
   "scripts": {
     "dev": "echo \"Run individual app dev scripts from their directories\"",
     "start:server": "ts-node packages/server/index.ts",
-    "test": "jest --runInBand",
-    "test:unit": "jest --testPathPattern=tests/unit --runInBand",
-    "test:integration": "jest --testPathPattern=tests/integration --runInBand",
-    "test:coverage": "jest --coverage --runInBand",
-    "test:watch": "jest --watch"
+    "test": "node ../node_modules/jest/bin/jest.js --runInBand",
+    "test:unit": "node ../node_modules/jest/bin/jest.js --testPathPattern=tests/unit --runInBand",
+    "test:integration": "node ../node_modules/jest/bin/jest.js --testPathPattern=tests/integration --runInBand",
+    "test:coverage": "node ../node_modules/jest/bin/jest.js --coverage --runInBand",
+    "test:watch": "node ../node_modules/jest/bin/jest.js --watch"
   },
   "dependencies": {},
   "devDependencies": {

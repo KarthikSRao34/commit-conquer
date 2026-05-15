@@ -11,10 +11,20 @@ import { CommitController } from './controllers/commitController';
 import { authenticate } from './middleware/authenticate';
 import { validateBody } from './middleware/validateBody';
 import { errorHandler } from './middleware/errorHandler';
+import rateLimit from 'express-rate-limit';
 
 export function createApp() {
   const app = express();
   app.use(express.json());
+
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  });
+
+  app.use('/api/v1', apiLimiter);
 
   const userService       = new UserService();
   const commitService     = new CommitService();
@@ -24,42 +34,42 @@ export function createApp() {
   const commitController = new CommitController(commitService);
 
   // ── User routes ────────────────────────────────────────────────────────────
-  app.get('/api/users', (req, res, next) =>
+  app.get('/api/v1/users', (req, res, next) =>
     userController.list(req, res, next));
 
-  app.get('/api/users/:id', (req, res, next) =>
+  app.get('/api/v1/users/:id', (req, res, next) =>
     userController.get(req, res, next));
 
-  app.post('/api/auth/register',
+  app.post('/api/v1/auth/register',
     validateBody(['username', 'email']),
     (req, res, next) => userController.register(req, res, next),
   );
 
-  app.post('/api/auth/login',
+  app.post('/api/v1/auth/login',
     validateBody(['email', 'password']),
     (req, res, next) => userController.login(req, res, next),
   );
 
   // ── Commit routes ──────────────────────────────────────────────────────────
-  app.get('/api/commits', (req, res, next) =>
+  app.get('/api/v1/commits', (req, res, next) =>
     commitController.list(req, res, next));
 
-  app.get('/api/commits/:id', (req, res, next) =>
+  app.get('/api/v1/commits/:id', (req, res, next) =>
     commitController.get(req, res, next));
 
-  app.post('/api/commits',
+  app.post('/api/v1/commits',
     authenticate,
     validateBody(['message', 'repo']),
     (req, res, next) => commitController.create(req, res, next),
   );
 
-  app.delete('/api/commits/:id',
+  app.delete('/api/v1/commits/:id',
     authenticate,
     (req, res, next) => commitController.remove(req, res, next),
   );
 
   // ── Leaderboard routes ─────────────────────────────────────────────────────
-  app.get('/api/leaderboard', async (req, res, next) => {
+  app.get('/api/v1/leaderboard', async (req, res, next) => {
     try {
       const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 10;
       const data  = await leaderboardService.getLeaderboard(limit);
@@ -69,7 +79,7 @@ export function createApp() {
     }
   });
 
-  app.get('/api/leaderboard/:userId', async (req, res, next) => {
+  app.get('/api/v1/leaderboard/:userId', async (req, res, next) => {
     try {
       const data = await leaderboardService.getUserRank(req.params.userId);
       if (!data) {
@@ -82,7 +92,7 @@ export function createApp() {
   });
 
   // ── Health check ───────────────────────────────────────────────────────────
-  app.get('/api/health', (_req: Request, res: Response) => {
+  app.get('/api/v1/health', (_req: Request, res: Response) => {
     res.json({ success: true, status: 'ok', timestamp: new Date().toISOString() });
   });
 

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-const ADMIN   = "/api/admin";
+const ADMIN   = "/api/v1/admin";
 const HEADERS = { "Content-Type": "application/json", "X-Admin-Secret": "admin_dev_secret" };
 
 async function fetchProducts(search = "", status = "all") {

@@ -157,7 +157,7 @@ app.get("/health", (_req, res) => {
 });
 
 const store = express.Router();
-app.use("/api/store", store);
+app.use("/api/v1/store", store);
 
 
 
@@ -403,7 +403,7 @@ store.get("/inventory/:variantId", (req, res) => {
 
 const admin = express.Router();
 admin.use(adminOnly);
-app.use("/api/admin", admin);
+app.use("/api/v1/admin", admin);
 
 
 

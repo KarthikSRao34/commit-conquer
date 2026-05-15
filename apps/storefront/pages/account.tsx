@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 
-const API = "/api/store";
+const API = "/api/v1/store";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
 export default function AccountPage() {

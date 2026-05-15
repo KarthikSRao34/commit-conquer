@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-const ADMIN   = "/api/admin";
+const ADMIN   = "/api/v1/admin";
 const HEADERS = { "Content-Type": "application/json", "X-Admin-Secret": "admin_dev_secret" };
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
