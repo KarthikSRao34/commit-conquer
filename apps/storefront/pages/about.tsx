@@ -1,4 +1,4 @@
-// apps/storefront/pages/about.tsx
+
 import { Link } from "react-router-dom";
 
 export default function AboutPage() {
@@ -11,7 +11,7 @@ export default function AboutPage() {
         .au-card:nth-child(3) { animation-delay: 0.2s; }
       `}</style>
 
-      {/* Hero */}
+      
       <section style={s.hero}>
         <div style={s.eyebrow}>Our Story</div>
         <h1 style={s.heroTitle}>Built for people<br />who move with purpose.</h1>
@@ -22,7 +22,7 @@ export default function AboutPage() {
         </p>
       </section>
 
-      {/* Values */}
+      
       <div style={s.cards}>
         {[
           { icon: "◈", title: "No excess", body: "Every detail earns its place. If it doesn't serve a function or improve the garment, we cut it." },
@@ -37,7 +37,7 @@ export default function AboutPage() {
         ))}
       </div>
 
-      {/* Team */}
+      
       <section style={s.section}>
         <h2 style={s.sectionTitle}>Who we are</h2>
         <p style={s.sectionBody}>

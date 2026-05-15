@@ -1,23 +1,14 @@
-// UnifiedDashboard.jsx
-// Drop this file into apps/storefront/pages/admin/ (or a new apps/dashboard/)
-// and wire it as the root route in main.tsx.
-// It composes AdminLayout + storefront pages into one shell.
-//
-// Usage in main.tsx:
-//   import UnifiedDashboard from "./pages/UnifiedDashboard";
-//   <Route path="/" element={<UnifiedDashboard />} />
+
 
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-// ─── Shared helpers ────────────────────────────────────────────────────────────
 
 const ADMIN_HDR = { "Content-Type": "application/json", "X-Admin-Secret": "admin_dev_secret" };
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 const fmtDate = (iso) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-// ─── Demo data generators ──────────────────────────────────────────────────────
 
 const PRODUCT_TITLES = [
   "Obsidian Crew Neck","Slate Cargo Pant","Onyx Hoodie","Granite Bomber",
@@ -89,7 +80,7 @@ function genStorefrontProducts(n = 60) {
   });
 }
 
-// ─── Status colours ────────────────────────────────────────────────────────────
+
 
 const STATUS_CLR = {
   pending:   { bg: "rgba(245,166,35,.12)",  clr: "#f5a623" },
@@ -99,7 +90,7 @@ const STATUS_CLR = {
   refunded:  { bg: "rgba(153,153,170,.12)",  clr: "#9999aa" },
 };
 
-// ─── Toast ─────────────────────────────────────────────────────────────────────
+
 
 function Toast({ msg }) {
   if (!msg) return null;
@@ -117,7 +108,7 @@ function useToast() {
   return [msg, show];
 }
 
-// ─── Dashboard stats page ──────────────────────────────────────────────────────
+
 
 function DashboardPage({ setPage }) {
   const stats = {
@@ -160,7 +151,7 @@ function DashboardPage({ setPage }) {
   );
 }
 
-// ─── Admin products page ───────────────────────────────────────────────────────
+
 
 function ProductsPage() {
   const [search, setSearch] = useState("");
@@ -285,7 +276,7 @@ function ProductsPage() {
   );
 }
 
-// ─── Admin orders page ─────────────────────────────────────────────────────────
+
 
 function OrdersPage() {
   const [search, setSearch] = useState("");
@@ -398,7 +389,7 @@ function OrdersPage() {
   );
 }
 
-// ─── Storefront view ───────────────────────────────────────────────────────────
+
 
 function StorefrontPage() {
   const [search, setSearch] = useState("");
@@ -429,7 +420,7 @@ function StorefrontPage() {
 
   return (
     <div>
-      {/* Storefront header bar */}
+      
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
         <div>
           <h1 style={s.pageTitle}>Storefront</h1>
@@ -461,7 +452,7 @@ function StorefrontPage() {
         ))}
       </div>
 
-      {/* Product grid */}
+      
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 16 }}>
         {visible.map((p) => (
           <div key={p.id} style={{ background: "#141417", border: "1px solid #2a2a31", borderRadius: 12, overflow: "hidden" }}>
@@ -494,7 +485,7 @@ function StorefrontPage() {
         ))}
       </div>
 
-      {/* Cart drawer */}
+      
       {cartOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 500 }} onClick={() => setCartOpen(false)}>
           <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 360, background: "#141417",
@@ -545,7 +536,7 @@ function StorefrontPage() {
   );
 }
 
-// ─── Shared styles ─────────────────────────────────────────────────────────────
+
 
 const s = {
   pageTitle: { fontSize: 28, fontWeight: 800, marginBottom: 4, margin: 0 },
@@ -566,7 +557,7 @@ const s = {
                borderRadius: 8, color: "#e8e8f0", fontSize: 14, outline: "none", boxSizing: "border-box" },
 };
 
-// ─── Nav items ─────────────────────────────────────────────────────────────────
+
 
 const NAV = [
   { id: "dashboard",  label: "Dashboard",  icon: "⬡", section: "admin" },
@@ -575,7 +566,7 @@ const NAV = [
   { id: "storefront", label: "Storefront", icon: "⬢", section: "store" },
 ];
 
-// ─── Root shell ────────────────────────────────────────────────────────────────
+
 
 const queryClient = new QueryClient();
 

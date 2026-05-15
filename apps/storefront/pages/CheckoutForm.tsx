@@ -1,6 +1,4 @@
-// apps/storefront/CheckoutForm.tsx
-// Integrates with: Layout.tsx (useCartState, useCartDispatch)
-// Drop this file at: apps/storefront/CheckoutForm.tsx
+
 
 import { useState, useCallback } from "react";
 import { useCartState, useCartDispatch } from "../Layout";
@@ -52,7 +50,7 @@ const EMPTY_PAYMENT: PaymentForm = {
   name_on_card: "",
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 const fmt = (cents: number) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -71,7 +69,7 @@ const fmtExpiry = (v: string) => {
   return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
 };
 
-// ─── CSS ──────────────────────────────────────────────────────────────────────
+
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -276,7 +274,7 @@ const css = `
   }
 `;
 
-// ─── Steps config ─────────────────────────────────────────────────────────────
+
 const STEPS: { key: Step; label: string }[] = [
   { key: "address", label: "Address" },
   { key: "shipping", label: "Shipping" },
@@ -284,7 +282,7 @@ const STEPS: { key: Step; label: string }[] = [
   { key: "review", label: "Review" },
 ];
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+
 export default function CheckoutForm() {
   const { items, total } = useCartState() ?? { items: [], total: 0 };
   const dispatch = useCartDispatch();
@@ -302,8 +300,8 @@ export default function CheckoutForm() {
   const [orderId, setOrderId] = useState<string | null>(null);
 
   const TAX_RATE = 0.08;
-  const discountAmt = discountApplied ? Math.round(total * 0.1) : 0; // 10% discount mock
-  const subtotal = total * 100; // convert to cents (cart total is in dollars)
+  const discountAmt = discountApplied ? Math.round(total * 0.1) : 0;
+  const subtotal = total * 100;
   const shipping = shippingOption.price;
   const tax = Math.round((subtotal - discountAmt) * TAX_RATE);
   const grandTotal = subtotal - discountAmt + shipping + tax;
@@ -318,7 +316,7 @@ export default function CheckoutForm() {
     [stepIdx]
   );
 
-  // ── Validation ────────────────────────────────────────────────────────────
+
   const validateAddress = () => {
     const errs: Record<string, string> = {};
     if (!email.trim()) errs.email = "Email is required";
@@ -361,7 +359,7 @@ export default function CheckoutForm() {
 
   const handlePlaceOrder = async () => {
     setIsPlacing(true);
-    // Mock API call — replace with real endpoint
+    
     await new Promise((r) => setTimeout(r, 1800));
     const mockOrderId = `ORD-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     setOrderId(mockOrderId);
@@ -388,7 +386,7 @@ export default function CheckoutForm() {
       setErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
     };
 
-  // ── Confirmed State ───────────────────────────────────────────────────────
+  
   if (step === "confirmed") {
     return (
       <>
@@ -432,9 +430,9 @@ export default function CheckoutForm() {
         </div>
 
         <div className="checkout-inner">
-          {/* ── Left: form ── */}
+          
           <div className="checkout-form-col">
-            {/* Step breadcrumb */}
+            
             <div className="steps">
               {STEPS.map((s, i) => {
                 const isDone = i < stepIdx;
@@ -454,7 +452,7 @@ export default function CheckoutForm() {
               })}
             </div>
 
-            {/* ── STEP 1: Address ── */}
+            
             {step === "address" && (
               <div className="card">
                 <div className="card-title">
@@ -545,7 +543,7 @@ export default function CheckoutForm() {
               </div>
             )}
 
-            {/* ── STEP 2: Shipping ── */}
+            
             {step === "shipping" && (
               <div className="card">
                 <div className="card-title">
@@ -588,7 +586,7 @@ export default function CheckoutForm() {
               </div>
             )}
 
-            {/* ── STEP 3: Payment ── */}
+            
             {step === "payment" && (
               <div className="card">
                 <div className="card-title">

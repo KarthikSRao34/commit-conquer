@@ -9,7 +9,7 @@ import * as Checkbox from "@radix-ui/react-checkbox";
 import * as Select from "@radix-ui/react-select";
 
 
-// ─── Local Cart State (self-contained, no storefront dependency) ─────────────
+
 function cartReducer(state, action) {
   switch (action.type) {
     case "ADD": {
@@ -70,7 +70,7 @@ function useLocalCart() {
   };
 }
 
-// ─── Mock Medusa SDK (replace with your actual client) ───────────────────────
+
 const fetchProducts = async ({ pageParam = 0, filters }) => {
   await new Promise((r) => setTimeout(r, 600));
   const limit = 12;
@@ -124,7 +124,7 @@ const deleteProducts = async (ids) => {
   return { deleted: ids };
 };
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&display=swap');
 
@@ -606,7 +606,7 @@ const css = `
   .btn-clear:hover { background: var(--red-dim); color: var(--red); border-color: rgba(255,92,92,0.25); }
 `;
 
-// ─── Inline CartDrawer (slide-over panel) ────────────────────────────────────
+
 function CartPanel({ open, onClose, setInventoryMap, items, itemCount, total, removeItem, updateQty, clearCart }) {
 
   if (!open) return null;
@@ -615,7 +615,7 @@ function CartPanel({ open, onClose, setInventoryMap, items, itemCount, total, re
     <>
       <div className="cart-overlay" onClick={onClose} />
       <div className="cart-panel" role="dialog" aria-label="Cart">
-        {/* Header */}
+        
         <div className="cart-header">
           <h2>
             Cart
@@ -639,7 +639,7 @@ function CartPanel({ open, onClose, setInventoryMap, items, itemCount, total, re
           </button>
         </div>
 
-        {/* Items */}
+        
         <div className="cart-items">
           {items.length === 0 ? (
             <div className="cart-empty">
@@ -721,7 +721,7 @@ function CartPanel({ open, onClose, setInventoryMap, items, itemCount, total, re
           )}
         </div>
 
-        {/* Footer */}
+        
         {items.length > 0 && (
           <div className="cart-footer">
             <div className="cart-total-row">
@@ -751,31 +751,31 @@ function CartPanel({ open, onClose, setInventoryMap, items, itemCount, total, re
   );
 }
 
-// ─── ProductsPage ─────────────────────────────────────────────────────────────
+
 export default function ProductsPage() {
   const queryClient = useQueryClient();
 
-  // Filter state
+  
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
-  // Selection state
+  
   const [selected, setSelected] = useState(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [inventoryMap, setInventoryMap] = useState({});
-  // Cart panel state
+  
   const [cartOpen, setCartOpen] = useState(false);
   const { items: cartItems, itemCount, total: cartTotal, addItem, removeItem, updateQty, clearCart } = useLocalCart();
 
-  // Debounce search
+  
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 350);
     return () => clearTimeout(t);
   }, [search]);
 
-  // Reset selection on filter change
+  
   useEffect(() => {
     setSelected(new Set());
   }, [debouncedSearch, statusFilter, categoryFilter]);
@@ -800,7 +800,7 @@ export default function ProductsPage() {
     initialPageParam: 0,
   });
 
-  // Infinite scroll sentinel
+  
   const sentinelRef = useRef(null);
   useEffect(() => {
     const el = sentinelRef.current;
@@ -816,13 +816,13 @@ export default function ProductsPage() {
     return () => obs.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Flatten pages
+  
   const allProducts = data?.pages.flatMap((p) => p.products) ?? [];
   const total = data?.pages[0]?.total ?? 0;
   const published = allProducts.filter((p) => p.status === "published").length;
   const drafts = allProducts.filter((p) => p.status === "draft").length;
 
-  // Selection helpers
+  
   const allSelected =
     allProducts.length > 0 && allProducts.every((p) => selected.has(p.id));
   const someSelected = selected.size > 0 && !allSelected;
@@ -837,7 +837,7 @@ export default function ProductsPage() {
     setSelected(next);
   };
 
-  // Delete mutation
+  
   const deleteMutation = useMutation({
     mutationFn: () => deleteProducts([...selected]),
     onSuccess: () => {
@@ -912,7 +912,7 @@ export default function ProductsPage() {
             />
           </div>
 
-          {/* Status filter */}
+          
           <Select.Root value={statusFilter} onValueChange={setStatusFilter}>
             <Select.Trigger className="select-trigger">
               <Select.Value />
@@ -999,7 +999,7 @@ export default function ProductsPage() {
           )}
         </div>
 
-        {/* Bulk action bar */}
+        
         {selected.size > 0 && (
           <div className="bulk-bar">
             <span>{selected.size} selected</span>

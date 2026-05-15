@@ -1,11 +1,7 @@
-// packages/modules/auth/auth.service.ts
-
 import { type Customer, type AuthSession } from "../../core/types";
 import { generateId, isValidEmail, sleep } from "../../core/utils";
 import { eventBus, EVENT } from "../../core/event-bus";
 import { ServiceError } from "../products/product.service";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface RegisterInput {
   email: string;
@@ -26,7 +22,6 @@ export interface UpdateProfileInput {
   phone?: string;
 }
 
-// Internal record — password hash stored separately from Customer type
 interface CustomerRecord {
   customer: Customer;
   password_hash: string;
@@ -34,27 +29,22 @@ interface CustomerRecord {
   reset_token_expires?: string;
 }
 
-// ─── In-Memory Stores ─────────────────────────────────────────────────────────
-
 const customersByEmail = new Map<string, CustomerRecord>();
-const customersById    = new Map<string, CustomerRecord>();
-const sessions         = new Map<string, AuthSession>(); // token → session
-
-// ─── Seed one demo customer so login works out of the box ─────────────────────
+const customersById = new Map<string, CustomerRecord>();
+const sessions = new Map<string, AuthSession>();
 
 function _seed() {
   const id = "cust_demo_001";
   const record: CustomerRecord = {
     customer: {
       id,
-      email:       "demo@example.com",
-      first_name:  "Demo",
-      last_name:   "User",
-      phone:       "+1 555 000 0000",
+      email: "demo@example.com",
+      first_name: "Demo",
+      last_name: "User",
+      phone: "+1 555 000 0000",
       has_account: true,
-      created_at:  new Date().toISOString(),
+      created_at: new Date().toISOString(),
     },
-    // plain "password123" — _hashPassword returns a deterministic mock hash
     password_hash: _hashPassword("password123"),
   };
   customersByEmail.set("demo@example.com", record);
@@ -63,13 +53,10 @@ function _seed() {
 
 _seed();
 
-// ─── Auth Service ─────────────────────────────────────────────────────────────
-
 export const AuthService = {
-
-  // ─── Register ──────────────────────────────────────────────────────────────
-
-  async register(input: RegisterInput): Promise<{ customer: Customer; token: string }> {
+  async register(
+    input: RegisterInput,
+  ): Promise<{ customer: Customer; token: string }> {
     _validateRegister(input);
 
     const emailKey = input.email.toLowerCase().trim();
@@ -81,16 +68,16 @@ export const AuthService = {
       );
     }
 
-    await sleep(150); // simulate bcrypt hashing delay
+    await sleep(150);
 
     const customer: Customer = {
-      id:          generateId("cust"),
-      email:       emailKey,
-      first_name:  input.first_name.trim(),
-      last_name:   input.last_name.trim(),
-      phone:       input.phone?.trim(),
+      id: generateId("cust"),
+      email: emailKey,
+      first_name: input.first_name.trim(),
+      last_name: input.last_name.trim(),
+      phone: input.phone?.trim(),
       has_account: true,
-      created_at:  new Date().toISOString(),
+      created_at: new Date().toISOString(),
     };
 
     const record: CustomerRecord = {
@@ -105,27 +92,32 @@ export const AuthService = {
 
     await eventBus.emit(EVENT.CUSTOMER_CREATED, {
       customer_id: customer.id,
-      email:       customer.email,
+      email: customer.email,
     });
 
     return { customer, token };
   },
 
-  // ─── Login ─────────────────────────────────────────────────────────────────
-
-  async login(input: LoginInput): Promise<{ customer: Customer; token: string }> {
+  async login(
+    input: LoginInput,
+  ): Promise<{ customer: Customer; token: string }> {
     if (!input.email || !input.password) {
-      throw new ServiceError("VALIDATION_ERROR", "Email and password are required");
+      throw new ServiceError(
+        "VALIDATION_ERROR",
+        "Email and password are required",
+      );
     }
 
     const emailKey = input.email.toLowerCase().trim();
-    const record   = customersByEmail.get(emailKey);
+    const record = customersByEmail.get(emailKey);
 
-    // Constant-time-ish check — always hash before comparing to avoid timing attacks
     await sleep(150);
 
     if (!record || !_verifyPassword(input.password, record.password_hash)) {
-      throw new ServiceError("INVALID_CREDENTIALS", "Invalid email or password");
+      throw new ServiceError(
+        "INVALID_CREDENTIALS",
+        "Invalid email or password",
+      );
     }
 
     const token = _issueToken(record.customer.id);
@@ -136,8 +128,6 @@ export const AuthService = {
 
     return { customer: record.customer, token };
   },
-
-  // ─── Logout ────────────────────────────────────────────────────────────────
 
   async logout(token: string): Promise<void> {
     const session = sessions.get(token);
@@ -150,52 +140,59 @@ export const AuthService = {
     });
   },
 
-  // ─── Validate Token ────────────────────────────────────────────────────────
-  // Called by auth middleware on every protected request.
-  // Returns the customer if the token is valid and not expired.
-
   validateToken(token: string): Customer {
     const session = sessions.get(token);
 
     if (!session) {
-      throw new ServiceError("INVALID_TOKEN", "Session not found — please log in again");
+      throw new ServiceError(
+        "INVALID_TOKEN",
+        "Session not found — please log in again",
+      );
     }
 
     if (new Date(session.expires_at) < new Date()) {
       sessions.delete(token);
-      throw new ServiceError("TOKEN_EXPIRED", "Session expired — please log in again");
+      throw new ServiceError(
+        "TOKEN_EXPIRED",
+        "Session expired — please log in again",
+      );
     }
 
     const record = customersById.get(session.customer_id);
     if (!record) {
-      throw new ServiceError("CUSTOMER_NOT_FOUND", "Customer account not found");
+      throw new ServiceError(
+        "CUSTOMER_NOT_FOUND",
+        "Customer account not found",
+      );
     }
 
     return record.customer;
   },
 
-  // ─── Get Customer ──────────────────────────────────────────────────────────
-
   getById(id: string): Customer {
     const record = customersById.get(id);
-    if (!record) throw new ServiceError("CUSTOMER_NOT_FOUND", `Customer ${id} not found`);
+    if (!record)
+      throw new ServiceError("CUSTOMER_NOT_FOUND", `Customer ${id} not found`);
     return record.customer;
   },
 
   getByEmail(email: string): Customer {
     const record = customersByEmail.get(email.toLowerCase().trim());
-    if (!record) throw new ServiceError("CUSTOMER_NOT_FOUND", `No account for ${email}`);
+    if (!record)
+      throw new ServiceError("CUSTOMER_NOT_FOUND", `No account for ${email}`);
     return record.customer;
   },
-
-  // ─── Update Profile ────────────────────────────────────────────────────────
 
   async updateProfile(
     customerId: string,
     input: UpdateProfileInput,
   ): Promise<Customer> {
     const record = customersById.get(customerId);
-    if (!record) throw new ServiceError("CUSTOMER_NOT_FOUND", `Customer ${customerId} not found`);
+    if (!record)
+      throw new ServiceError(
+        "CUSTOMER_NOT_FOUND",
+        `Customer ${customerId} not found`,
+      );
 
     if (input.first_name !== undefined) {
       record.customer.first_name = input.first_name.trim();
@@ -207,14 +204,11 @@ export const AuthService = {
       record.customer.phone = input.phone.trim();
     }
 
-    // Sync both maps
     customersById.set(customerId, record);
     customersByEmail.set(record.customer.email, record);
 
     return record.customer;
   },
-
-  // ─── Change Password ───────────────────────────────────────────────────────
 
   async changePassword(
     customerId: string,
@@ -222,12 +216,19 @@ export const AuthService = {
     newPassword: string,
   ): Promise<void> {
     const record = customersById.get(customerId);
-    if (!record) throw new ServiceError("CUSTOMER_NOT_FOUND", `Customer ${customerId} not found`);
+    if (!record)
+      throw new ServiceError(
+        "CUSTOMER_NOT_FOUND",
+        `Customer ${customerId} not found`,
+      );
 
     await sleep(150);
 
     if (!_verifyPassword(currentPassword, record.password_hash)) {
-      throw new ServiceError("INVALID_CREDENTIALS", "Current password is incorrect");
+      throw new ServiceError(
+        "INVALID_CREDENTIALS",
+        "Current password is incorrect",
+      );
     }
 
     _validatePasswordStrength(newPassword);
@@ -237,7 +238,6 @@ export const AuthService = {
     customersById.set(customerId, record);
     customersByEmail.set(record.customer.email, record);
 
-    // Invalidate all existing sessions for this customer
     for (const [token, session] of sessions.entries()) {
       if (session.customer_id === customerId) {
         sessions.delete(token);
@@ -245,26 +245,20 @@ export const AuthService = {
     }
   },
 
-  // ─── Request Password Reset ────────────────────────────────────────────────
-  // In production: send an email with the reset link.
-  // Here we return the token directly so you can wire it into your email flow.
-
   async requestPasswordReset(email: string): Promise<{ reset_token: string }> {
     const emailKey = email.toLowerCase().trim();
-    const record   = customersByEmail.get(emailKey);
+    const record = customersByEmail.get(emailKey);
 
-    // Always respond the same way — don't leak whether the account exists
     await sleep(200);
 
     if (!record) {
-      // Silently succeed so we don't reveal account existence
       return { reset_token: "noop" };
     }
 
     const reset_token = _generateResetToken();
-    const expires     = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
+    const expires = new Date(Date.now() + 1000 * 60 * 60);
 
-    record.reset_token         = reset_token;
+    record.reset_token = reset_token;
     record.reset_token_expires = expires.toISOString();
 
     customersById.set(record.customer.id, record);
@@ -272,18 +266,15 @@ export const AuthService = {
 
     await eventBus.emit(EVENT.PASSWORD_RESET, {
       customer_id: record.customer.id,
-      email:       emailKey,
+      email: emailKey,
     });
 
-    // In production: send email with link containing reset_token
     console.log(
       `[AuthService] Password reset token for ${emailKey}: ${reset_token}`,
     );
 
     return { reset_token };
   },
-
-  // ─── Confirm Password Reset ────────────────────────────────────────────────
 
   async confirmPasswordReset(
     reset_token: string,
@@ -301,21 +292,27 @@ export const AuthService = {
     }
 
     if (!found) {
-      throw new ServiceError("INVALID_TOKEN", "Reset token is invalid or has already been used");
+      throw new ServiceError(
+        "INVALID_TOKEN",
+        "Reset token is invalid or has already been used",
+      );
     }
 
     if (
       !found.reset_token_expires ||
       new Date(found.reset_token_expires) < new Date()
     ) {
-      throw new ServiceError("TOKEN_EXPIRED", "Reset token has expired — please request a new one");
+      throw new ServiceError(
+        "TOKEN_EXPIRED",
+        "Reset token has expired — please request a new one",
+      );
     }
 
     await sleep(150);
 
-    found.password_hash        = _hashPassword(new_password);
-    found.reset_token          = undefined;
-    found.reset_token_expires  = undefined;
+    found.password_hash = _hashPassword(new_password);
+    found.reset_token = undefined;
+    found.reset_token_expires = undefined;
 
     customersById.set(found.customer.id, found);
     customersByEmail.set(found.customer.email, found);
@@ -328,9 +325,9 @@ export const AuthService = {
     }
   },
 
-  // ─── Google OAuth Login ─────────────────────────────────────────────────────
-
-  async googleLogin(googleToken: string): Promise<{ customer: Customer; token: string }> {
+  async googleLogin(
+    googleToken: string,
+  ): Promise<{ customer: Customer; token: string }> {
     const payload = _decodeGoogleToken(googleToken);
 
     const email = payload.email;
@@ -365,28 +362,19 @@ export const AuthService = {
     return { customer: record.customer, token };
   },
 
-  // ─── List active sessions (admin/debug) ────────────────────────────────────
-
   activeSessions(customerId: string): AuthSession[] {
     return [...sessions.values()].filter(
       (s) =>
-        s.customer_id === customerId &&
-        new Date(s.expires_at) > new Date(),
+        s.customer_id === customerId && new Date(s.expires_at) > new Date(),
     );
   },
 };
 
-// ─── Private Helpers ──────────────────────────────────────────────────────────
-
-/**
- * Issue a new session token for a customer.
- * Token is valid for 7 days.
- */
 function _issueToken(customerId: string): string {
-  // In production use: jsonwebtoken.sign({ sub: customerId }, JWT_SECRET, { expiresIn: "7d" })
-  // For the hackathon we use a simple random token stored in memory.
-  const token      = `tok_${customerId}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  const expires_at = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString();
+  const token = `tok_${customerId}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const expires_at = new Date(
+    Date.now() + 1000 * 60 * 60 * 24 * 7,
+  ).toISOString();
 
   const session: AuthSession = {
     customer_id: customerId,
@@ -398,14 +386,10 @@ function _issueToken(customerId: string): string {
   return token;
 }
 
-/**
- * Deterministic mock hash — XOR of char codes with a salt prefix.
- * Replace with bcrypt.hash() in production.
- */
 function _hashPassword(password: string): string {
-  const salt   = "cc_salt_v1_";
+  const salt = "cc_salt_v1_";
   const salted = salt + password;
-  let hash     = 0;
+  let hash = 0;
   for (let i = 0; i < salted.length; i++) {
     hash = ((hash << 5) - hash + salted.charCodeAt(i)) | 0;
   }
@@ -431,7 +415,10 @@ function _validatePasswordStrength(password: string): void {
 
 function _validateRegister(input: RegisterInput): void {
   if (!input.email || !isValidEmail(input.email)) {
-    throw new ServiceError("VALIDATION_ERROR", "A valid email address is required");
+    throw new ServiceError(
+      "VALIDATION_ERROR",
+      "A valid email address is required",
+    );
   }
   if (!input.first_name?.trim()) {
     throw new ServiceError("VALIDATION_ERROR", "First name is required");
@@ -442,11 +429,6 @@ function _validateRegister(input: RegisterInput): void {
   _validatePasswordStrength(input.password);
 }
 
-/**
- * Decode a Google ID token (JWT) without verification.
- * In production, use google-auth-library to verify the token signature
- * with Google's public keys instead.
- */
 function _decodeGoogleToken(token: string): Record<string, any> {
   try {
     const parts = token.split(".");

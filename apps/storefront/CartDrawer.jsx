@@ -1,5 +1,4 @@
-// apps/storefront/CartDrawer.jsx
-// Slide-out cart. Import in pages/index.tsx as: import CartDrawer from "../CartDrawer"
+
 
 import { useCartState, useCartDispatch } from "./Layout";
 import { useNavigate } from "react-router-dom";

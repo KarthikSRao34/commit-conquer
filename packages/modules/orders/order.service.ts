@@ -1,4 +1,4 @@
-// packages/modules/orders/order.service.ts
+
 
 import {
   type Order,
@@ -12,7 +12,6 @@ import { ServiceError } from "../products/product.service";
 import { ProductService } from "../products/product.service";
 import { CartService } from "../cart/cart.service";
 
-// ─── Input Types ──────────────────────────────────────────────────────────────
 
 export interface ListOrdersInput {
   offset?: number;
@@ -30,15 +29,15 @@ export interface PlaceOrderInput {
 
 export interface RefundInput {
   order_id: string;
-  amount: number;        // cents — must not exceed order total
+  amount: number;        
   reason?: string;
 }
 
-// ─── In-Memory Order Store ────────────────────────────────────────────────────
+
 
 const orders = new Map<string, Order>();
 
-// ─── Seed a few demo orders so the admin UI isn't empty on first load ─────────
+
 
 function _seedOrders() {
   const NAMES = [
@@ -140,11 +139,11 @@ function _seedOrders() {
 
 _seedOrders();
 
-// ─── Order Service ────────────────────────────────────────────────────────────
+
 
 export const OrderService = {
 
-  // ─── List ──────────────────────────────────────────────────────────────────
+  
 
   list(input: ListOrdersInput = {}): PaginatedResponse<Order> {
     const {
@@ -158,17 +157,17 @@ export const OrderService = {
 
     let result = [...orders.values()];
 
-    // Filter by status
+    
     if (status !== "all") {
       result = result.filter((o) => o.status === status);
     }
 
-    // Filter by customer
+    
     if (customer_id) {
       result = result.filter((o) => o.customer_id === customer_id);
     }
 
-    // Search by order id, customer name, or email
+    
     if (search?.trim()) {
       const q = search.trim().toLowerCase();
       result = result.filter(
@@ -181,7 +180,7 @@ export const OrderService = {
       );
     }
 
-    // Sort
+    
     result = result.sort((a, b) => {
       switch (sort) {
         case "oldest":
@@ -199,7 +198,7 @@ export const OrderService = {
     return paginate(result, offset, limit);
   },
 
-  // ─── Get by ID ─────────────────────────────────────────────────────────────
+  
 
   getById(id: string): Order {
     const order = orders.get(id);
@@ -207,19 +206,12 @@ export const OrderService = {
     return order;
   },
 
-  // ─── Place Order ───────────────────────────────────────────────────────────
-  // Converts a completed cart into a persisted order.
-  // Steps:
-  //   1. Complete the cart (validates email + address + items)
-  //   2. Decrement inventory for each line item
-  //   3. Persist the order
-  //   4. Emit ORDER_PLACED event
 
   async place(input: PlaceOrderInput): Promise<Order> {
-    // 1. Complete cart — validates and returns cart snapshot + generated order id
+    
     const { cart, order_id } = await CartService.complete(input.cart_id);
 
-    // 2. Build order items from cart items
+    
     const items: OrderItem[] = cart.items.map((ci) => ({
       id:            generateId("oi"),
       product_id:    ci.product_id,
@@ -232,7 +224,7 @@ export const OrderService = {
       subtotal:      ci.price * ci.quantity,
     }));
 
-    // 3. Build and persist the order
+    
     const order: Order = {
       id:                  order_id,
       status:              "pending",
@@ -253,7 +245,7 @@ export const OrderService = {
 
     orders.set(order.id, order);
 
-    // 4. Decrement inventory — best-effort, don't block order creation
+    
     for (const item of cart.items) {
       try {
         await ProductService.adjustInventory(
@@ -269,7 +261,7 @@ export const OrderService = {
       }
     }
 
-    // 5. Emit
+    
     await eventBus.emit(EVENT.ORDER_PLACED, {
       order_id:       order.id,
       customer_email: order.email,
@@ -279,9 +271,7 @@ export const OrderService = {
     return order;
   },
 
-  // ─── Fulfill ───────────────────────────────────────────────────────────────
-  // Marks order as processing → fulfilled.
-  // Only allowed from pending or processing status.
+  
 
   async fulfill(orderId: string): Promise<Order> {
     const order = OrderService.getById(orderId);
@@ -293,7 +283,7 @@ export const OrderService = {
       );
     }
 
-    await sleep(300); // simulate async fulfillment logic
+    await sleep(300); 
 
     const updated = _update(orderId, {
       status:             "processing",
@@ -306,7 +296,7 @@ export const OrderService = {
     return updated;
   },
 
-  // ─── Ship ──────────────────────────────────────────────────────────────────
+  
 
   async ship(orderId: string, tracking_number?: string): Promise<Order> {
     const order = OrderService.getById(orderId);
@@ -330,7 +320,7 @@ export const OrderService = {
     return updated;
   },
 
-  // ─── Deliver ───────────────────────────────────────────────────────────────
+  
 
   async deliver(orderId: string): Promise<Order> {
     const order = OrderService.getById(orderId);
@@ -352,9 +342,7 @@ export const OrderService = {
     return updated;
   },
 
-  // ─── Cancel ────────────────────────────────────────────────────────────────
-  // Cancellable from pending or processing only.
-  // Re-stocks inventory on cancel.
+  
 
   async cancel(orderId: string, reason?: string): Promise<Order> {
     const order = OrderService.getById(orderId);
@@ -391,9 +379,7 @@ export const OrderService = {
     return updated;
   },
 
-  // ─── Refund ────────────────────────────────────────────────────────────────
-  // Partial or full refund — amount must not exceed order total.
-  // Only allowed on delivered or shipped orders.
+  
 
   async refund(input: RefundInput): Promise<Order> {
     const { order_id, amount, reason = "customer_request" } = input;
@@ -417,7 +403,7 @@ export const OrderService = {
       );
     }
 
-    await sleep(400); // simulate payment gateway call
+    await sleep(400);
 
     await eventBus.emit(EVENT.ORDER_REFUND_REQUESTED, { order_id, amount });
 
@@ -433,8 +419,7 @@ export const OrderService = {
     return updated;
   },
 
-  // ─── Stats ─────────────────────────────────────────────────────────────────
-  // Used by the admin dashboard.
+  
 
   stats(): {
     total: number;
@@ -464,7 +449,7 @@ export const OrderService = {
   },
 };
 
-// ─── Private Helpers ──────────────────────────────────────────────────────────
+
 
 function _update(id: string, changes: Partial<Order>): Order {
   const order = orders.get(id);

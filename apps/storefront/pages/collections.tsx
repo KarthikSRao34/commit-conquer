@@ -1,5 +1,4 @@
-// apps/storefront/pages/collections.tsx
-// Route: /collections and /collections/:handle
+
 import { Link, useParams } from "react-router-dom";
 
 const COLLECTIONS = [
@@ -40,7 +39,7 @@ const COLLECTIONS = [
 export default function CollectionsPage() {
   const { handle } = useParams<{ handle?: string }>();
 
-  // If a specific collection is selected, filter to just that one
+  
   const active = handle ? COLLECTIONS.find((c) => c.handle === handle) : null;
 
   return (
